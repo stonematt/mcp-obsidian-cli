@@ -13,7 +13,8 @@
  *
  * Requirements:
  *   - Obsidian must be running with the CLI plugin active.
- *   - The `obsidian` binary must be on PATH (or set OBSIDIAN_CLI_PATH).
+ *   - The CLI binary is auto-discovered from common macOS locations.
+ *     Set OBSIDIAN_CLI_PATH to override.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
