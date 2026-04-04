@@ -25,11 +25,22 @@ import { promisify } from "node:util";
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { load as yamlLoad } from "js-yaml";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { exec } from "node:child_process";
 
 const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROMPTS_DIR = join(__dirname, "prompts");
+
+const promptContent = {
+  "obsidian-cli":      readFileSync(join(PROMPTS_DIR, "obsidian-cli.md"), "utf8"),
+  "obsidian-markdown": readFileSync(join(PROMPTS_DIR, "obsidian-markdown.md"), "utf8"),
+  "obsidian-bases":    readFileSync(join(PROMPTS_DIR, "obsidian-bases.md"), "utf8"),
+  "obsidian-canvas":   readFileSync(join(PROMPTS_DIR, "obsidian-canvas.md"), "utf8"),
+};
 
 const configBase = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
 const CONFIG_DIR = join(configBase, "mcp-obsidian-cli");
@@ -408,6 +419,38 @@ server.tool(
   {},
   async () => runTool("recents"),
 );
+
+// ---- MCP Prompts -----------------------------------------------------------
+
+const promptMeta = {
+  "obsidian-cli": {
+    title: "Obsidian CLI Reference",
+    description: "CLI usage patterns, parameter syntax, and command examples for the Obsidian CLI. Adapted from kepano/obsidian-skills (MIT License, https://github.com/kepano/obsidian-skills).",
+  },
+  "obsidian-markdown": {
+    title: "Obsidian Flavored Markdown Reference",
+    description: "Wikilinks, embeds, callouts, properties, tags, and other Obsidian-specific markdown syntax. Adapted from kepano/obsidian-skills (MIT License, https://github.com/kepano/obsidian-skills).",
+  },
+  "obsidian-bases": {
+    title: "Obsidian Bases Reference",
+    description: "Bases syntax for database-like views: filters, formulas, view types, and summaries. Adapted from kepano/obsidian-skills (MIT License, https://github.com/kepano/obsidian-skills).",
+  },
+  "obsidian-canvas": {
+    title: "JSON Canvas Reference",
+    description: "JSON Canvas format for visual canvases: node types, edges, groups, and layout. Adapted from kepano/obsidian-skills (MIT License, https://github.com/kepano/obsidian-skills).",
+  },
+};
+
+for (const [name, content] of Object.entries(promptContent)) {
+  const meta = promptMeta[name];
+  server.registerPrompt(
+    name,
+    { title: meta.title, description: meta.description },
+    () => ({
+      messages: [{ role: "user", content: { type: "text", text: content } }],
+    })
+  );
+}
 
 // ---- Start ---------------------------------------------------------------
 
