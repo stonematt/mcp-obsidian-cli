@@ -12,27 +12,27 @@ Full Obsidian API access over MCP — search index, wikilink resolution, tasks, 
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ **MCP-01**: `npx mcp-obsidian-cli` starts a working MCP server on stdio — Phase 1
+- ✓ **MCP-02**: Generic `obsidian` tool accepts any CLI command string — Phase 1
+- ✓ **MCP-03**: Typed convenience tools (13 tools registered) — Phase 1
+- ✓ **MCP-04**: `OBSIDIAN_VAULT` env var targeting — Phase 1
+- ✓ **MCP-05**: `OBSIDIAN_CLI_PATH` env var override — Phase 1
+- ✓ **MCP-06**: `OBSIDIAN_TIMEOUT_MS` env var — Phase 1
+- ✓ **MCP-07**: Graceful error handling — Phase 1
+- ✓ **MCP-08**: Published on npm as `mcp-obsidian-cli` — Phase 1
+- ✓ **MCP-10**: Tool descriptions include CLI help text and examples — Phase 2.1
+- ✓ **MCP-14**: Connection health check (Obsidian running detection) — Phase 1.5
 
 ### Active
 
-- [ ] **MCP-01**: `npx mcp-obsidian-cli` starts a working MCP server on stdio
-- [ ] **MCP-02**: Generic `obsidian` tool accepts any CLI command string and returns output
-- [ ] **MCP-03**: Typed convenience tools for: daily:read, daily:append, read, search:context, tags, tasks, properties, property:set, create, backlinks, files, recents
-- [ ] **MCP-04**: `OBSIDIAN_VAULT` env var targets a specific vault by name
-- [ ] **MCP-05**: `OBSIDIAN_CLI_PATH` env var overrides the CLI binary path
-- [ ] **MCP-06**: `OBSIDIAN_TIMEOUT_MS` env var controls command timeout (default 15s)
-- [ ] **MCP-07**: Graceful error handling — CLI failures return MCP error results, not crashes
-- [ ] **MCP-08**: Published on npm as `mcp-obsidian-cli`
 - [ ] **MCP-09**: README with Claude Desktop config example, tool reference, comparison table
 
 ### Should Have (v1.x)
 
-- [ ] **MCP-10**: Tool descriptions include CLI help text for better LLM tool selection
+- [ ] **PRMT-***: MCP prompts for Obsidian knowledge (CLI, Markdown, Bases, Canvas) — shipped Phase 2.1
 - [ ] **MCP-11**: Structured output parsing — JSON format results parsed into structured MCP content
 - [ ] **MCP-12**: Multi-vault support — tool to list available vaults, switch between them
 - [ ] **MCP-13**: MCP resources exposing vault metadata (vault name, file count, tag list)
-- [ ] **MCP-14**: Connection health check — verify Obsidian is running and CLI is responsive before tool calls
 
 ### Out of Scope
 
@@ -68,7 +68,7 @@ A working prototype exists. Key files:
 - `server.js` — complete MCP server implementation (~295 lines, Node.js, ES modules)
 - `package.json` — dependencies: `@modelcontextprotocol/sdk`, `zod`
 
-The prototype is functional but needs: proper bin entry for npx, error handling hardening, tool description improvements, test coverage, and npm publishing setup.
+The server is published on npm (v1.0.1) with 13 convenience tools, 4 MCP prompts (Obsidian CLI, Markdown, Bases, Canvas), config file support, and startup health checks.
 
 ## Constraints
 
@@ -87,6 +87,8 @@ The prototype is functional but needs: proper bin entry for npx, error handling 
 | No TypeScript | Minimal project; SDK types are sufficient; avoids build step | Decided |
 | Unscoped npm name | Better discoverability; fall back to scoped if trademark issue | Decided |
 | Shell out via execFile | Safer than exec (no shell injection); CLI is a simple binary invocation | Decided |
+| MCP prompts from Kepano's skills | MIT-licensed, high-quality Obsidian knowledge; attribution in prompt metadata only (not inline) | Decided — Phase 2.1 |
+| Prompt content as static .md files | Loaded once at startup via readFileSync; simple, no runtime overhead | Decided — Phase 2.1 |
 
 ## Research Needed
 
@@ -113,4 +115,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after initialization*
+*Last updated: 2026-04-04 after Phase 2.1*
