@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-04-04T07:18:38.342Z"
+progress:
+  total_phases: 5
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 6
+---
+
 # State: mcp-obsidian-cli
 
 **Project:** mcp-obsidian-cli
@@ -35,9 +48,11 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Accumulated Context
 
 ### Roadmap Evolution
+
 - Phase 2.1 inserted after Phase 2: MCP Prompts — ship Obsidian knowledge via MCP prompts mirroring Kepano's obsidian-skills (URGENT)
 
 ### Decisions (Phase 2.1)
+
 - Prompt content in external .md files under prompts/ directory, loaded by readFileSync at startup (D-08)
 - MIT attribution in prompt metadata/description only — not in file content (D-03)
 - Each prompt file ends with ## Using This Knowledge with MCP Tools section (D-02)
