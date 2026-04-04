@@ -59,8 +59,37 @@ function loadConfig() {
   return config;
 }
 
+const KNOWN_CLI_PATHS = [
+  "/Applications/Obsidian.app/Contents/MacOS/obsidian",
+  join(homedir(), "Applications/Obsidian.app/Contents/MacOS/obsidian"),
+];
+
+async function resolveCliPath(configured) {
+  if (configured !== "obsidian") return configured;
+
+  try {
+    await execAsync("which obsidian", { timeout: 2000 });
+    return configured;
+  } catch { /* not on PATH */ }
+
+  for (const p of KNOWN_CLI_PATHS) {
+    if (existsSync(p)) return p;
+  }
+
+  try {
+    const { stdout } = await execAsync(
+      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
+      { timeout: 2000 }
+    );
+    const match = stdout.match(/(\S*\/Contents\/MacOS\/obsidian)/i);
+    if (match && existsSync(match[1])) return match[1];
+  } catch { /* no running process */ }
+
+  return configured;
+}
+
 const config = loadConfig();
-const CLI = config.cliPath;
+const CLI = await resolveCliPath(config.cliPath);
 const VAULT = config.vault;
 const TIMEOUT_MS = config.timeoutMs;
 
