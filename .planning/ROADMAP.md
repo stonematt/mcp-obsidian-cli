@@ -89,7 +89,7 @@
 - PRMT-06: MIT attribution for content derived from Kepano's obsidian-skills
 
 **Depends on:** Phase 2
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 **Success Criteria:**
 1. `prompts/list` returns all registered prompts
@@ -100,7 +100,7 @@
 
 Plans:
 - [x] 02.1-01-PLAN.md — Create 4 prompt content files (obsidian-cli, obsidian-markdown, obsidian-bases, obsidian-canvas) — Wave 1 ✅ 2026-04-03
-- [ ] 02.1-02-PLAN.md — Wire prompt registration, enrich tool descriptions, update package.json — Wave 2
+- [x] 02.1-02-PLAN.md — Wire prompt registration, enrich tool descriptions, update package.json — Wave 2
 
 ## Phase 3: Polish (v1.x)
 
@@ -129,7 +129,7 @@ Plans:
 | 1 | Foundation | 8 | 6 |
 | 1.5 | Health Check & Config | 7 | 6 |
 | 2 | Distribution | 4 | 6 |
-| 2.1 | MCP Prompts (INSERTED) | 6 | 5 |
+| 2.1 | 2/2 | Complete   | 2026-04-04 |
 | 3 | Polish | 5 | 5 |
 
 **Total:** 30 requirements across 5 phases

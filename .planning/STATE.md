@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 
 ## Current Phase
 
-**Phase 2:** Distribution — In Progress
+**Phase 2.1:** MCP Prompts — Complete
 
 ## Phase Status
 
@@ -20,7 +20,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 | Phase 1: Foundation | ● Complete | 3/3 tasks |
 | Phase 1.5: Health Check & Config | ● Complete | 6/6 tests |
 | Phase 2: Distribution | ● Complete | 2/2 waves |
-| Phase 2.1: MCP Prompts | ◑ In Progress | 1/2 plans |
+| Phase 2.1: MCP Prompts | ● Complete | 2/2 plans |
 | Phase 3: Polish | ○ Pending | 0/5 |
 
 ## Progress
@@ -42,6 +42,9 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 - MIT attribution in prompt metadata/description only — not in file content (D-03)
 - Each prompt file ends with ## Using This Knowledge with MCP Tools section (D-02)
 - Dropped plugin dev sections from obsidian-cli source — not relevant to MCP note-management consumers (D-01)
+- Loop-based prompt registration over promptContent/promptMeta objects — DRY, easy to extend (D-05)
+- Prompt files loaded at module top-level synchronously — errors surface at startup, not first use (D-06)
+- package.json files array as explicit npm allowlist — server.js and prompts/ only (D-09)
 
 ## Notes
 
@@ -50,4 +53,4 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 - Brownfield: existing code needs hardening, not greenfield
 
 ---
-*Last updated: 2026-04-03 after Phase 2.1 Plan 01 completion*
+*Last updated: 2026-04-03 after Phase 2.1 Plan 02 completion*
