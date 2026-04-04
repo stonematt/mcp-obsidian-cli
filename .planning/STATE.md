@@ -18,13 +18,14 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-03)
+See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Full Obsidian API access over MCP — search index, wikilink resolution, tasks, properties, daily notes, backlinks, 80+ commands — with zero API keys and zero REST plugins.
+**Current focus:** Phase 3 — Polish (v1.x)
 
 ## Current Phase
 
-**Phase 2.1:** MCP Prompts — Complete
+**Phase 3:** Polish (v1.x) — Ready to plan
 
 ## Phase Status
 
@@ -68,4 +69,4 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 - Brownfield: existing code needs hardening, not greenfield
 
 ---
-*Last updated: 2026-04-03 after Phase 2.1 Plan 02 completion*
+*Last updated: 2026-04-04 after Phase 2.1 complete, transitioning to Phase 3*
