@@ -99,7 +99,7 @@
 5. Tool descriptions include relevant CLI help text
 
 Plans:
-- [ ] 02.1-01-PLAN.md — Create 4 prompt content files (obsidian-cli, obsidian-markdown, obsidian-bases, obsidian-canvas) — Wave 1
+- [x] 02.1-01-PLAN.md — Create 4 prompt content files (obsidian-cli, obsidian-markdown, obsidian-bases, obsidian-canvas) — Wave 1 ✅ 2026-04-03
 - [ ] 02.1-02-PLAN.md — Wire prompt registration, enrich tool descriptions, update package.json — Wave 2
 
 ## Phase 3: Polish (v1.x)
