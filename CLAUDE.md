@@ -1,38 +1,52 @@
-<!-- GSD:project-start source:PROJECT.md -->
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project
 
-**mcp-obsidian-cli**
-
-An MCP (Model Context Protocol) server distributed via npm/npx that wraps the Obsidian CLI plugin, exposing Obsidian's full native API surface to AI assistants like Claude Desktop, Claude Code, Cursor, and any MCP-compatible client.
-
-**Core Value:** Full Obsidian API access over MCP — search index, wikilink resolution, tasks, properties, daily notes, backlinks, 80+ commands — with zero API keys and zero REST plugins. Just the CLI.
+**mcp-obsidian-cli** — An MCP server distributed via npm/npx that wraps the Obsidian CLI plugin, exposing Obsidian's full native API surface to AI assistants. All operations go through the `obsidian` CLI binary (IPC to running Obsidian instance); there is no direct Obsidian API access.
 
 ### Constraints
 
-- **Node.js ES modules** — MCP SDK is ESM-only
-- **Zero build step** — plain `.js` files, no TypeScript compilation, no bundler
-- **Stdio transport only** — MCP servers for Claude Desktop use stdin/stdout
-- **Obsidian must be running** — CLI commands fail if the app isn't open; server should return clear errors
-- **Single dependency on CLI binary** — no direct Obsidian API access; all operations go through the CLI
-<!-- GSD:project-end -->
+- **ES modules only** — `"type": "module"` in package.json; MCP SDK requires ESM
+- **Zero build step** — plain `.js` files, no TypeScript, no bundler
+- **Stdio transport** — MCP server communicates over stdin/stdout
+- **Obsidian must be running** — CLI commands fail if the app isn't open
 
-<!-- GSD:stack-start source:STACK.md -->
-## Technology Stack
+## Commands
 
-Technology stack not yet documented. Will populate after codebase mapping or first phase.
-<!-- GSD:stack-end -->
+```bash
+# Run the server
+node server.js
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
-## Conventions
+# Run tests (Node.js built-in test runner)
+node --test test/run.test.js
 
-Conventions not yet established. Will populate as patterns emerge during development.
-<!-- GSD:conventions-end -->
+# Run via npx (as end users would)
+npx mcp-obsidian-cli
+```
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+Tests use `node:test` — no test framework dependency. The health check test behavior depends on `OBSIDIAN_RUNNING=1` env var: without it, tests verify the server exits cleanly when Obsidian isn't running; with it, tests verify successful startup.
+
 ## Architecture
 
-Architecture not yet mapped. Follow existing patterns found in the codebase.
-<!-- GSD:architecture-end -->
+**Single-file server** (`server.js`, ~400 lines) — the entire MCP server lives in one file:
+
+- **Config loading** (`loadConfig`) — YAML config file at `$XDG_CONFIG_HOME/mcp-obsidian-cli/config.yaml` with env var overrides. Precedence: env vars > config file > defaults.
+- **CLI execution** (`run`, `parseArgs`, `runTool`) — shells out to the `obsidian` binary via `execFile`. `parseArgs` handles quoted values. `runTool` wraps results into MCP response format.
+- **Health check** (`checkObsidianRunning`) — verifies Obsidian is actually running (not just installed) by checking processes and CLI version output. Filters out startup/update messages that indicate CLI launched Obsidian rather than connecting to it.
+- **Tool registration** — one generic pass-through tool (`obsidian`) that accepts any CLI command string, plus ~12 typed convenience tools for common operations (daily notes, search, tasks, properties, etc.). Each convenience tool builds a CLI command string and delegates to `runTool`.
+
+Key dependencies: `@modelcontextprotocol/sdk` (MCP protocol), `zod` (tool input schemas), `js-yaml` (config parsing).
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OBSIDIAN_VAULT` | _(none)_ | Target vault name |
+| `OBSIDIAN_CLI_PATH` | `obsidian` | Path to CLI binary |
+| `OBSIDIAN_TIMEOUT_MS` | `15000` | Command timeout |
+| `XDG_CONFIG_HOME` | `~/.config` | Config file base path |
 
 <!-- GSD:workflow-start source:GSD defaults -->
 ## GSD Workflow Enforcement
@@ -46,8 +60,6 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
-
-
 
 <!-- GSD:profile-start -->
 ## Developer Profile
