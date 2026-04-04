@@ -7,6 +7,10 @@
   "bin": {
     "mcp-obsidian-cli": "server.js"
   },
+  "files": [
+    "server.js",
+    "prompts/"
+  ],
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/run.test.js"

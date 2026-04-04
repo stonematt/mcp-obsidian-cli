@@ -247,28 +247,28 @@ Examples:
 
 server.tool(
   "obsidian_daily_read",
-  "Read today's daily note contents.",
+  "Read today's daily note contents.\n\nReturns the full markdown content of today's daily note. Returns an error if no daily note exists for today.",
   {},
   async () => runTool("daily:read"),
 );
 
 server.tool(
   "obsidian_daily_path",
-  "Get the file path of today's daily note.",
+  "Get the file path of today's daily note.\n\nReturns the vault-relative path (e.g. 'Daily/2026-04-03.md'). Useful for constructing paths for other tools.",
   {},
   async () => runTool("daily:path"),
 );
 
 server.tool(
   "obsidian_daily_append",
-  "Append content to today's daily note.",
+  "Append content to today's daily note.\n\nParameters:\n  content (required) — markdown text to append at the end of today's daily note\n\nExamples:\n  obsidian_daily_append({ content: \"- Meeting with team at 3pm\" })\n  obsidian_daily_append({ content: \"> [!tip] Remember\\n> Review PR before EOD\" })",
   { content: z.string().describe("Content to append") },
   async ({ content }) => runTool(`daily:append content="${content.replace(/"/g, '\\"')}"`),
 );
 
 server.tool(
   "obsidian_read",
-  "Read a note by file name (wikilink-style) or exact path.",
+  "Read a note by file name (wikilink-style) or exact path.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  One of file or path is required.\n\nExamples:\n  obsidian_read({ file: \"Meeting Notes\" })\n  obsidian_read({ path: \"Projects/todo.md\" })",
   {
     file: z.string().optional().describe("File name (wikilink resolution)"),
     path: z.string().optional().describe("Exact file path"),
@@ -282,7 +282,7 @@ server.tool(
 
 server.tool(
   "obsidian_search",
-  "Full-text search across the vault with line context.",
+  "Full-text search across the vault with line context.\n\nParameters:\n  query (required) — search terms, supports Obsidian query syntax\n  path (optional) — restrict results to a folder path\n  limit (optional) — max number of files to return\n\nExamples:\n  obsidian_search({ query: \"meeting notes\" })\n  obsidian_search({ query: \"project status\", path: \"Work/\", limit: 5 })",
   {
     query: z.string().describe("Search query"),
     path: z.string().optional().describe("Limit to folder"),
@@ -298,7 +298,7 @@ server.tool(
 
 server.tool(
   "obsidian_tags",
-  "List tags in the vault with counts.",
+  "List tags in the vault with counts.\n\nParameters:\n  sort (optional) — 'name' or 'count' (default: name)\n\nExamples:\n  obsidian_tags({})\n  obsidian_tags({ sort: \"count\" })",
   {
     sort: z.enum(["name", "count"]).optional().describe("Sort order"),
   },
@@ -311,7 +311,7 @@ server.tool(
 
 server.tool(
   "obsidian_tasks",
-  "List tasks. Use daily=true for today's tasks only.",
+  "List tasks from vault notes.\n\nParameters:\n  daily (optional) — true to show only today's daily note tasks\n  todo (optional) — true to show only incomplete tasks\n  done (optional) — true to show only completed tasks\n  path (optional) — filter by file path\n\nExamples:\n  obsidian_tasks({ daily: true })\n  obsidian_tasks({ todo: true, path: \"Projects/\" })",
   {
     daily: z.boolean().optional().describe("Show only daily note tasks"),
     todo: z.boolean().optional().describe("Show incomplete tasks only"),
@@ -330,7 +330,7 @@ server.tool(
 
 server.tool(
   "obsidian_properties",
-  "List or read frontmatter properties.",
+  "List or read frontmatter properties.\n\nParameters:\n  file (optional) — note name for wikilink resolution\n  path (optional) — exact file path\n  name (optional) — specific property name to read (requires file or path)\n\nExamples:\n  obsidian_properties({}) — list all properties with counts\n  obsidian_properties({ file: \"My Note\" }) — properties of a specific note\n  obsidian_properties({ file: \"My Note\", name: \"status\" }) — read one property",
   {
     file: z.string().optional().describe("File name"),
     path: z.string().optional().describe("File path"),
@@ -352,7 +352,7 @@ server.tool(
 
 server.tool(
   "obsidian_create",
-  "Create a new note.",
+  "Create a new note.\n\nParameters:\n  name (optional) — file name for the new note\n  path (optional) — vault-relative path\n  content (optional) — initial markdown content\n  template (optional) — template name to use\n\nExamples:\n  obsidian_create({ name: \"Meeting 2026-04-03\", content: \"# Meeting Notes\\n\\n- Attendees: ...\" })\n  obsidian_create({ path: \"Projects/new-idea.md\", template: \"project\" })",
   {
     name: z.string().optional().describe("File name"),
     path: z.string().optional().describe("File path"),
@@ -371,7 +371,7 @@ server.tool(
 
 server.tool(
   "obsidian_property_set",
-  "Set a frontmatter property on a note.",
+  "Set a frontmatter property on a note.\n\nParameters:\n  name (required) — property name\n  value (required) — property value\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n  One of file or path is required.\n\nExamples:\n  obsidian_property_set({ name: \"status\", value: \"done\", file: \"My Task\" })\n  obsidian_property_set({ name: \"tags\", value: \"project, active\", path: \"Work/todo.md\" })",
   {
     name: z.string().describe("Property name"),
     value: z.string().describe("Property value"),
@@ -387,7 +387,7 @@ server.tool(
 
 server.tool(
   "obsidian_backlinks",
-  "List backlinks to a note.",
+  "List backlinks to a note.\n\nParameters:\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n\nExamples:\n  obsidian_backlinks({ file: \"Project Plan\" })\n  obsidian_backlinks({ path: \"Ideas/brainstorm.md\" })",
   {
     file: z.string().optional().describe("File name"),
     path: z.string().optional().describe("File path"),
@@ -400,7 +400,7 @@ server.tool(
 
 server.tool(
   "obsidian_files",
-  "List files in the vault or a specific folder.",
+  "List files in the vault or a specific folder.\n\nParameters:\n  folder (optional) — filter by folder path\n  ext (optional) — filter by file extension (e.g. 'md', 'canvas')\n\nExamples:\n  obsidian_files({})\n  obsidian_files({ folder: \"Projects/\", ext: \"md\" })",
   {
     folder: z.string().optional().describe("Filter by folder path"),
     ext: z.string().optional().describe("Filter by extension"),
@@ -415,7 +415,7 @@ server.tool(
 
 server.tool(
   "obsidian_recents",
-  "List recently opened files.",
+  "List recently opened files.\n\nReturns the most recently opened files in the vault, ordered by last access time.",
   {},
   async () => runTool("recents"),
 );
