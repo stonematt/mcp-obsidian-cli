@@ -420,6 +420,15 @@ server.tool(
   async () => runTool("recents"),
 );
 
+server.tool(
+  "obsidian_help",
+  "Get Obsidian reference documentation on a topic.\n\nParameters:\n  topic (required) — one of: cli, markdown, bases, canvas\n\nExamples:\n  obsidian_help({ topic: \"markdown\" }) — wikilinks, embeds, callouts, properties, tags\n  obsidian_help({ topic: \"bases\" }) — Bases YAML schema, filters, formulas, views\n  obsidian_help({ topic: \"canvas\" }) — JSON Canvas nodes, edges, colors, layout\n  obsidian_help({ topic: \"cli\" }) — CLI command syntax and parameter patterns",
+  { topic: z.enum(["cli", "markdown", "bases", "canvas"]).describe("Reference topic") },
+  async ({ topic }) => ({
+    content: [{ type: "text", text: promptContent[`obsidian-${topic}`] }],
+  }),
+);
+
 // ---- MCP Prompts -----------------------------------------------------------
 
 const promptMeta = {
