@@ -6,6 +6,11 @@
  * directly to the CLI, plus a handful of convenience tools for the most
  * common operations (read, search, daily, tasks, properties, etc.).
  *
+ * Environment variables:
+ *   OBSIDIAN_CLI_PATH    - Path to the obsidian CLI binary (default: "obsidian")
+ *   OBSIDIAN_VAULT       - Vault name to use (default: "")
+ *   OBSIDIAN_TIMEOUT_MS  - Command timeout in ms (default: 15000)
+ *
  * Requirements:
  *   - Obsidian must be running with the CLI plugin active.
  *   - The `obsidian` binary must be on PATH (or set OBSIDIAN_CLI_PATH).
@@ -16,12 +21,75 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { readFileSync, mkdirSync, existsSync } from "node:fs";
+import { load as yamlLoad } from "js-yaml";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { exec } from "node:child_process";
 
 const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
-const CLI = process.env.OBSIDIAN_CLI_PATH || "obsidian";
-const VAULT = process.env.OBSIDIAN_VAULT || "";
-const TIMEOUT_MS = parseInt(process.env.OBSIDIAN_TIMEOUT_MS || "15000", 10);
+const configBase = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
+const CONFIG_DIR = join(configBase, "mcp-obsidian-cli");
+const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
+
+function loadConfig() {
+  const defaults = { vault: "", cliPath: "obsidian", timeoutMs: 15000 };
+  let config = { ...defaults };
+
+  if (existsSync(CONFIG_FILE)) {
+    try {
+      const content = readFileSync(CONFIG_FILE, "utf8");
+      const fileConfig = yamlLoad(content);
+      if (fileConfig) {
+        if (fileConfig.vault) config.vault = fileConfig.vault;
+        if (fileConfig.cliPath) config.cliPath = fileConfig.cliPath;
+        if (fileConfig.timeoutMs) config.timeoutMs = fileConfig.timeoutMs;
+      }
+    } catch (err) {
+      console.error("Warning: failed to load config file:", err.message);
+    }
+  }
+
+  if (process.env.OBSIDIAN_VAULT) config.vault = process.env.OBSIDIAN_VAULT;
+  if (process.env.OBSIDIAN_CLI_PATH) config.cliPath = process.env.OBSIDIAN_CLI_PATH;
+  if (process.env.OBSIDIAN_TIMEOUT_MS) config.timeoutMs = parseInt(process.env.OBSIDIAN_TIMEOUT_MS, 10);
+
+  return config;
+}
+
+const config = loadConfig();
+const CLI = config.cliPath;
+const VAULT = config.vault;
+const TIMEOUT_MS = config.timeoutMs;
+
+async function checkObsidianRunning() {
+  try {
+    const { stdout: psOut } = await execAsync("ps aux | grep -i obsidian | grep -v grep | grep -v Helper", { timeout: 2000 });
+    const obsidianRunning = psOut.includes("/Applications/Obsidian.app");
+    if (!obsidianRunning) {
+      return { running: false, version: null };
+    }
+    const { stdout } = await execFileAsync(CLI, ["version"], { timeout: 2000 });
+    const hasStartupMsg = stdout.includes("Loaded updated app package") || 
+                          stdout.includes("Checking for update") ||
+                          stdout.includes("App is up to date") ||
+                          stdout.includes("Latest version is");
+    if (hasStartupMsg) {
+      return { running: false, version: null };
+    }
+    if (stdout.includes("(installer")) {
+      const match = stdout.match(/(\d+\.\d+\.\d+)/);
+      if (match) {
+        return { running: true, version: match[1] };
+      }
+    }
+    return { running: false, version: null };
+  } catch (err) {
+    return { running: false, version: null };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,7 +100,6 @@ const TIMEOUT_MS = parseInt(process.env.OBSIDIAN_TIMEOUT_MS || "15000", 10);
  * Returns { stdout, stderr } or throws on non-zero exit / timeout.
  */
 async function run(argString) {
-  // Split respecting quoted values — good enough for CLI arg forwarding.
   const args = parseArgs(argString);
   if (VAULT) args.push(`vault=${VAULT}`);
 
@@ -42,10 +109,30 @@ async function run(argString) {
       maxBuffer: 4 * 1024 * 1024,
       env: { ...process.env },
     });
-    return { stdout: stdout.trimEnd(), stderr: stderr.trimEnd() };
+    return { stdout: stdout.trimEnd(), stderr: stderr.trimEnd(), error: null };
   } catch (err) {
+    if (err.code === 'ENOENT') {
+      return {
+        stdout: '',
+        stderr: '',
+        error: {
+          type: 'CLI_NOT_FOUND',
+          message: `Obsidian CLI not found at: ${CLI}. Set OBSIDIAN_CLI_PATH or ensure 'obsidian' is on PATH.`
+        }
+      };
+    }
+    if (err.killed) {
+      return {
+        stdout: '',
+        stderr: '',
+        error: {
+          type: 'TIMEOUT',
+          message: `Command timed out after ${TIMEOUT_MS}ms. Set OBSIDIAN_TIMEOUT_MS to increase timeout.`
+        }
+      };
+    }
     const msg = err.stderr?.trimEnd() || err.message;
-    throw new Error(msg);
+    return { stdout: '', stderr: '', error: { type: 'EXECUTION_ERROR', message: msg } };
   }
 }
 
@@ -67,9 +154,20 @@ function text(content) {
   return { content: [{ type: "text", text: content }] };
 }
 
+/** Standard MCP error result. */
+function errorResult(content, code = "EXECUTION_ERROR") {
+  return {
+    content: [{ type: "text", text: content }],
+    isError: true,
+  };
+}
+
 /** Run CLI, return MCP result. */
 async function runTool(argString) {
-  const { stdout, stderr } = await run(argString);
+  const { stdout, stderr, error } = await run(argString);
+  if (error) {
+    return errorResult(error.message, error.type);
+  }
   const parts = [];
   if (stdout) parts.push(stdout);
   if (stderr) parts.push(`[stderr] ${stderr}`);
@@ -284,9 +382,14 @@ server.tool(
 // ---- Start ---------------------------------------------------------------
 
 async function main() {
+  const { running, version } = await checkObsidianRunning();
+  if (!running) {
+    console.error("Error: Obsidian is not running. Please open Obsidian and try again.");
+    process.exit(1);
+  }
   const transport = new StdioServerTransport();
+  console.error(`obsidian-mcp server running on stdio (Obsidian ${version})`);
   await server.connect(transport);
-  console.error("obsidian-mcp server running on stdio");
 }
 
 main().catch((err) => {

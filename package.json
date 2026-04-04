@@ -1,14 +1,15 @@
 {
   "name": "mcp-obsidian-cli",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "MCP server wrapping the Obsidian CLI — full native API access over Model Context Protocol",
   "main": "server.js",
   "bin": {
-    "mcp-obsidian-cli": "./server.js"
+    "mcp-obsidian-cli": "server.js"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/run.test.js"
   },
   "engines": {
     "node": ">=18"
@@ -26,10 +27,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stonematt/mcp-obsidian-cli"
+    "url": "git+https://github.com/stonematt/mcp-obsidian-cli.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "js-yaml": "^4.1.0",
     "zod": "^3.25.0"
   }
 }
