@@ -25,6 +25,9 @@
 5. Missing vault or CLI path returns clear error, not crash
 6. Command timeout returns error after configured milliseconds
 
+**Plans:**
+- [ ] 01-foundation-01-PLAN.md — Foundation hardening (bin entry, error handling, timeout)
+
 ---
 
 ## Phase 2: Distribution
