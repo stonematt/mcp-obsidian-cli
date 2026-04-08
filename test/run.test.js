@@ -57,8 +57,8 @@ describe("health check", () => {
     if (exitCode !== 0) {
       throw new Error(`Expected exit code 0, got ${exitCode}`);
     }
-    if (!stderr.includes("(Obsidian")) {
-      throw new Error(`Expected "(Obsidian" version in stderr, got: ${stderr}`);
+    if (!stderr.includes("obsidian-mcp server running")) {
+      throw new Error(`Expected "obsidian-mcp server running" in stderr, got: ${stderr}`);
     }
   });
 });
