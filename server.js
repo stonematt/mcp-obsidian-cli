@@ -185,7 +185,7 @@ function parseArgs(str) {
   const re = /(?:[^\s"]+|"[^"]*")+/g;
   let m;
   while ((m = re.exec(str)) !== null) {
-    args.push(m[0]);
+    args.push(m[0].replace(/"([^"]*)"/g, "$1"));
   }
   return args;
 }
