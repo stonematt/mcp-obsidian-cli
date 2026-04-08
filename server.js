@@ -107,28 +107,13 @@ const TIMEOUT_MS = config.timeoutMs;
 
 async function checkObsidianRunning() {
   try {
-    const { stdout: psOut } = await execAsync("ps aux | grep -i obsidian | grep -v grep | grep -v Helper", { timeout: 2000 });
-    const obsidianRunning = psOut.includes("/Applications/Obsidian.app");
-    if (!obsidianRunning) {
-      return { running: false, version: null };
-    }
-    const { stdout } = await execFileAsync(CLI, ["version"], { timeout: 2000 });
-    const hasStartupMsg = stdout.includes("Loaded updated app package") || 
-                          stdout.includes("Checking for update") ||
-                          stdout.includes("App is up to date") ||
-                          stdout.includes("Latest version is");
-    if (hasStartupMsg) {
-      return { running: false, version: null };
-    }
-    if (stdout.includes("(installer")) {
-      const match = stdout.match(/(\d+\.\d+\.\d+)/);
-      if (match) {
-        return { running: true, version: match[1] };
-      }
-    }
-    return { running: false, version: null };
-  } catch (err) {
-    return { running: false, version: null };
+    const { stdout } = await execAsync(
+      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
+      { timeout: 2000 }
+    );
+    return stdout.includes("/Applications/Obsidian.app");
+  } catch {
+    return false;
   }
 }
 
@@ -185,7 +170,7 @@ function parseArgs(str) {
   const re = /(?:[^\s"]+|"[^"]*")+/g;
   let m;
   while ((m = re.exec(str)) !== null) {
-    args.push(m[0]);
+    args.push(m[0].replace(/"([^"]*)"/g, "$1"));
   }
   return args;
 }
@@ -464,13 +449,13 @@ for (const [name, content] of Object.entries(promptContent)) {
 // ---- Start ---------------------------------------------------------------
 
 async function main() {
-  const { running, version } = await checkObsidianRunning();
+  const running = await checkObsidianRunning();
   if (!running) {
     console.error("Error: Obsidian is not running. Please open Obsidian and try again.");
     process.exit(1);
   }
   const transport = new StdioServerTransport();
-  console.error(`obsidian-mcp server running on stdio (Obsidian ${version})`);
+  console.error("obsidian-mcp server running on stdio");
   await server.connect(transport);
 }
 
