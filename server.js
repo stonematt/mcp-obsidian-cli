@@ -22,12 +22,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { readFileSync, mkdirSync, existsSync } from "node:fs";
-import { load as yamlLoad } from "js-yaml";
+import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { exec } from "node:child_process";
+import { loadConfig, parseArgs, text, errorResult } from "./lib/helpers.js";
 
 const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
@@ -46,30 +46,6 @@ const configBase = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
 const CONFIG_DIR = join(configBase, "mcp-obsidian-cli");
 const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
 
-function loadConfig() {
-  const defaults = { vault: "", cliPath: "obsidian", timeoutMs: 15000 };
-  let config = { ...defaults };
-
-  if (existsSync(CONFIG_FILE)) {
-    try {
-      const content = readFileSync(CONFIG_FILE, "utf8");
-      const fileConfig = yamlLoad(content);
-      if (fileConfig) {
-        if (fileConfig.vault) config.vault = fileConfig.vault;
-        if (fileConfig.cliPath) config.cliPath = fileConfig.cliPath;
-        if (fileConfig.timeoutMs) config.timeoutMs = fileConfig.timeoutMs;
-      }
-    } catch (err) {
-      console.error("Warning: failed to load config file:", err.message);
-    }
-  }
-
-  if (process.env.OBSIDIAN_VAULT) config.vault = process.env.OBSIDIAN_VAULT;
-  if (process.env.OBSIDIAN_CLI_PATH) config.cliPath = process.env.OBSIDIAN_CLI_PATH;
-  if (process.env.OBSIDIAN_TIMEOUT_MS) config.timeoutMs = parseInt(process.env.OBSIDIAN_TIMEOUT_MS, 10);
-
-  return config;
-}
 
 const KNOWN_CLI_PATHS = [
   "/Applications/Obsidian.app/Contents/MacOS/obsidian",
@@ -100,7 +76,7 @@ async function resolveCliPath(configured) {
   return configured;
 }
 
-const config = loadConfig();
+const config = loadConfig(CONFIG_FILE);
 const CLI = await resolveCliPath(config.cliPath);
 const VAULT = config.vault;
 const TIMEOUT_MS = config.timeoutMs;
@@ -162,31 +138,6 @@ async function run(input) {
   }
 }
 
-/**
- * Minimal arg parser: splits on whitespace but respects key="value with spaces".
- */
-function parseArgs(str) {
-  const args = [];
-  const re = /(?:[^\s"]+|"[^"]*")+/g;
-  let m;
-  while ((m = re.exec(str)) !== null) {
-    args.push(m[0].replace(/"([^"]*)"/g, "$1"));
-  }
-  return args;
-}
-
-/** Standard MCP text result. */
-function text(content) {
-  return { content: [{ type: "text", text: content }] };
-}
-
-/** Standard MCP error result. */
-function errorResult(content, code = "EXECUTION_ERROR") {
-  return {
-    content: [{ type: "text", text: content }],
-    isError: true,
-  };
-}
 
 /** Run CLI, return MCP result. Accepts a command string or an args array. */
 async function runTool(input) {
