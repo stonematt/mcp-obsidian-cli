@@ -157,7 +157,7 @@ async function runTool(input) {
 
 const server = new McpServer({
   name: "obsidian-mcp",
-  version: "1.1.0",
+  version: "1.2.0",
   capabilities: { tools: {} },
 });
 
