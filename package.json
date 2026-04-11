@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/run.test.js"
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=18"
