@@ -92,6 +92,18 @@ Pass criteria:
 - [ ] Output lists available CLI commands
 - [ ] Content sample: quote the first 5 lines of the response
 
+### T11: Create note with rich content in subdirectory
+Action: Call obsidian_create({ path: "0.inbox/sniff-test-create.md", content: "---\nstatus: draft\ntags:\n  - test\nLinks:\n  - \"[[sniff-test-create]]\"\n---\n# Sniff Test\n\nThis note has [[wikilinks]], a \"quoted string\", and lives in a subdirectory." }).
+Then call obsidian_read({ path: "0.inbox/sniff-test-create.md" }) to verify the content.
+Pass criteria:
+- [ ] File was created without error
+- [ ] Read confirms the file exists at 0.inbox/sniff-test-create.md (not "0.inbox or any other mangled path)
+- [ ] Frontmatter status is "draft" (not "\\" or escaped)
+- [ ] Frontmatter Links contains [[sniff-test-create]] with proper wikilink brackets (no backslashes)
+- [ ] Body contains [[wikilinks]] without backslash escaping
+- [ ] Body contains "quoted string" with actual double quotes (not backslash-escaped)
+Cleanup: After verifying, call obsidian({ command: "trash path=0.inbox/sniff-test-create.md" }) to remove the test file.
+
 ## Report Format
 
 ### Per-test detail
@@ -115,4 +127,4 @@ Criteria:
 | T2 | Help — Markdown reference | ✓/✗ | 5/5 | ... |
 | ... | ... | ... | ... | ... |
 
-**X/10 passed.** Flag anything surprising or any criteria that partially failed.
+**X/11 passed.** Flag anything surprising or any criteria that partially failed.

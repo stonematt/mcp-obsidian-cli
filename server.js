@@ -125,8 +125,8 @@ async function checkObsidianRunning() {
  * Run the Obsidian CLI with the given argument string.
  * Returns { stdout, stderr } or throws on non-zero exit / timeout.
  */
-async function run(argString) {
-  const args = parseArgs(argString);
+async function run(input) {
+  const args = Array.isArray(input) ? [...input] : parseArgs(input);
   if (VAULT) args.push(`vault=${VAULT}`);
 
   try {
@@ -188,9 +188,9 @@ function errorResult(content, code = "EXECUTION_ERROR") {
   };
 }
 
-/** Run CLI, return MCP result. */
-async function runTool(argString) {
-  const { stdout, stderr, error } = await run(argString);
+/** Run CLI, return MCP result. Accepts a command string or an args array. */
+async function runTool(input) {
+  const { stdout, stderr, error } = await run(input);
   if (error) {
     return errorResult(error.message, error.type);
   }
@@ -248,7 +248,7 @@ server.tool(
   "obsidian_daily_append",
   "Append content to today's daily note.\n\nParameters:\n  content (required) — markdown text to append at the end of today's daily note\n\nExamples:\n  obsidian_daily_append({ content: \"- Meeting with team at 3pm\" })\n  obsidian_daily_append({ content: \"> [!tip] Remember\\n> Review PR before EOD\" })",
   { content: z.string().describe("Content to append") },
-  async ({ content }) => runTool(`daily:append content="${content.replace(/"/g, '\\"')}"`),
+  async ({ content }) => runTool(["daily:append", `content=${content}`]),
 );
 
 server.tool(
@@ -260,8 +260,10 @@ server.tool(
   },
   async ({ file, path }) => {
     if (!file && !path) return text("Error: provide file= or path=");
-    const arg = file ? `file="${file}"` : `path="${path}"`;
-    return runTool(`read ${arg}`);
+    const args = ["read"];
+    if (file) args.push(`file=${file}`);
+    if (path) args.push(`path=${path}`);
+    return runTool(args);
   },
 );
 
@@ -274,10 +276,10 @@ server.tool(
     limit: z.number().optional().describe("Max files to return"),
   },
   async ({ query, path, limit }) => {
-    let cmd = `search:context query="${query.replace(/"/g, '\\"')}"`;
-    if (path) cmd += ` path="${path}"`;
-    if (limit) cmd += ` limit=${limit}`;
-    return runTool(cmd);
+    const args = ["search:context", `query=${query}`];
+    if (path) args.push(`path=${path}`);
+    if (limit) args.push(`limit=${limit}`);
+    return runTool(args);
   },
 );
 
@@ -288,9 +290,9 @@ server.tool(
     sort: z.enum(["name", "count"]).optional().describe("Sort order"),
   },
   async ({ sort }) => {
-    let cmd = "tags counts";
-    if (sort) cmd += ` sort=${sort}`;
-    return runTool(cmd);
+    const args = ["tags", "counts"];
+    if (sort) args.push(`sort=${sort}`);
+    return runTool(args);
   },
 );
 
@@ -304,12 +306,12 @@ server.tool(
     path: z.string().optional().describe("Filter by file path"),
   },
   async ({ daily, todo, done, path }) => {
-    let cmd = "tasks";
-    if (daily) cmd += " daily";
-    if (todo) cmd += " todo";
-    if (done) cmd += " done";
-    if (path) cmd += ` path="${path}"`;
-    return runTool(cmd);
+    const args = ["tasks"];
+    if (daily) args.push("daily");
+    if (todo) args.push("todo");
+    if (done) args.push("done");
+    if (path) args.push(`path=${path}`);
+    return runTool(args);
   },
 );
 
@@ -323,15 +325,16 @@ server.tool(
   },
   async ({ file, path, name }) => {
     if (name && (file || path)) {
-      // Read a specific property from a specific file
-      const target = file ? `file="${file}"` : `path="${path}"`;
-      return runTool(`property:read name="${name}" ${target}`);
+      const args = ["property:read", `name=${name}`];
+      if (file) args.push(`file=${file}`);
+      if (path) args.push(`path=${path}`);
+      return runTool(args);
     }
-    let cmd = "properties";
-    if (file) cmd += ` file="${file}"`;
-    if (path) cmd += ` path="${path}"`;
-    cmd += " counts";
-    return runTool(cmd);
+    const args = ["properties"];
+    if (file) args.push(`file=${file}`);
+    if (path) args.push(`path=${path}`);
+    args.push("counts");
+    return runTool(args);
   },
 );
 
@@ -345,12 +348,12 @@ server.tool(
     template: z.string().optional().describe("Template to use"),
   },
   async ({ name, path, content, template }) => {
-    let cmd = "create";
-    if (name) cmd += ` name="${name}"`;
-    if (path) cmd += ` path="${path}"`;
-    if (template) cmd += ` template="${template}"`;
-    if (content) cmd += ` content="${content.replace(/"/g, '\\"')}"`;
-    return runTool(cmd);
+    const args = ["create"];
+    if (name) args.push(`name=${name}`);
+    if (path) args.push(`path=${path}`);
+    if (template) args.push(`template=${template}`);
+    if (content) args.push(`content=${content}`);
+    return runTool(args);
   },
 );
 
@@ -364,9 +367,11 @@ server.tool(
     path: z.string().optional().describe("File path"),
   },
   async ({ name, value, file, path: filePath }) => {
-    const target = file ? `file="${file}"` : filePath ? `path="${filePath}"` : "";
-    if (!target) return text("Error: provide file= or path=");
-    return runTool(`property:set name="${name}" value="${value.replace(/"/g, '\\"')}" ${target}`);
+    if (!file && !filePath) return text("Error: provide file= or path=");
+    const args = ["property:set", `name=${name}`, `value=${value}`];
+    if (file) args.push(`file=${file}`);
+    if (filePath) args.push(`path=${filePath}`);
+    return runTool(args);
   },
 );
 
@@ -378,8 +383,11 @@ server.tool(
     path: z.string().optional().describe("File path"),
   },
   async ({ file, path }) => {
-    const target = file ? `file="${file}"` : path ? `path="${path}"` : "";
-    return runTool(`backlinks ${target} counts`);
+    const args = ["backlinks"];
+    if (file) args.push(`file=${file}`);
+    if (path) args.push(`path=${path}`);
+    args.push("counts");
+    return runTool(args);
   },
 );
 
@@ -391,10 +399,10 @@ server.tool(
     ext: z.string().optional().describe("Filter by extension"),
   },
   async ({ folder, ext }) => {
-    let cmd = "files";
-    if (folder) cmd += ` folder="${folder}"`;
-    if (ext) cmd += ` ext=${ext}`;
-    return runTool(cmd);
+    const args = ["files"];
+    if (folder) args.push(`folder=${folder}`);
+    if (ext) args.push(`ext=${ext}`);
+    return runTool(args);
   },
 );
 
