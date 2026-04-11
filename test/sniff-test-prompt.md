@@ -102,7 +102,7 @@ Pass criteria:
 - [ ] Frontmatter Links contains [[sniff-test-create]] with proper wikilink brackets (no backslashes)
 - [ ] Body contains [[wikilinks]] without backslash escaping
 - [ ] Body contains "quoted string" with actual double quotes (not backslash-escaped)
-Cleanup: After verifying, call obsidian({ command: "trash path=0.inbox/sniff-test-create.md" }) to remove the test file.
+Cleanup: After verifying, call obsidian({ command: "delete path=0.inbox/sniff-test-create.md" }) to remove the test file.
 
 ## Report Format
 
