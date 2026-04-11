@@ -68,10 +68,18 @@ Wait for the user to return with results. Do not proceed until they paste result
 
 ### Step 3: Evaluate results
 
-When the user pastes the results, evaluate them:
+When the user pastes the results, use a **Sonnet agent** to evaluate them. This saves
+Opus tokens since evaluation is mechanical pattern-matching work.
+
+Launch the agent with:
+- The full pasted results
+- The contents of `test/sniff-test-prompt.md` (so it knows the pass criteria)
+- Instructions to evaluate as described below
+
+The agent should:
 
 1. **Parse the summary table** — extract test name, result, criteria counts
-2. **Count passes and failures** — report X/10
+2. **Count passes and failures** — report X/N (N = total tests in sniff-test-prompt.md)
 3. **For any failures**, check:
    - Was the tool call correct?
    - Did the pass criteria match what the test expects?
@@ -81,11 +89,11 @@ When the user pastes the results, evaluate them:
 5. **Flag anything suspicious** even in passing tests (e.g., truncated output, unexpected
    content, wrong sort order)
 
-Report your evaluation:
+The agent should return its evaluation in this format:
 ```
 ## Sniff Test Evaluation
 
-**Result: X/10 passed**
+**Result: X/N passed**
 
 [For each test, one line: test name, your assessment, any concerns]
 
@@ -93,6 +101,8 @@ Report your evaluation:
 
 [Overall: ship/no-ship recommendation]
 ```
+
+Relay the agent's evaluation to the user.
 
 ### Step 4: Restore production config
 
