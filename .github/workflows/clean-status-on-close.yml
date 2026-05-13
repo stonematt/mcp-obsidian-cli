@@ -1,0 +1,71 @@
+name: clean-status-on-close
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  strip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove kanban status labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS_JSON: ${{ toJSON(github.event.issue.labels) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t status_labels < <(jq -r '.[] | .name | select(startswith("status:"))' <<< "$LABELS_JSON")
+          if [ ${#status_labels[@]} -eq 0 ]; then
+            echo "No status:* labels to strip"
+          else
+            for label in "${status_labels[@]}"; do
+              echo "Removing: $label"
+              gh issue edit "$NUMBER" --repo "$REPO" --remove-label "$label"
+            done
+          fi
+
+      - name: Set project status to Released
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PROJECT_ID: PVT_kwHOACsNbs4BXiQq
+          STATUS_FIELD_ID: PVTSSF_lAHOACsNbs4BXiQqzhSueMs
+          RELEASED_OPT_ID: 91ff7738
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          item_id=$(gh api graphql -f query='
+            query($issueId: ID!) {
+              node(id: $issueId) {
+                ... on Issue {
+                  projectItems(first: 20) {
+                    nodes { id project { id } }
+                  }
+                }
+              }
+            }' -f issueId="$ISSUE_NODE_ID" \
+            --jq ".data.node.projectItems.nodes[] | select(.project.id == \"$PROJECT_ID\") | .id" | head -1)
+
+          if [ -z "$item_id" ]; then
+            echo "Issue not on project $PROJECT_ID — nothing to mark"
+            exit 0
+          fi
+
+          echo "Setting Released on project item: $item_id"
+          gh api graphql -f query='
+            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $projectId
+                itemId: $itemId
+                fieldId: $fieldId
+                value: { singleSelectOptionId: $optId }
+              }) { projectV2Item { id } }
+            }' -f projectId="$PROJECT_ID" -f itemId="$item_id" \
+            -f fieldId="$STATUS_FIELD_ID" -f optId="$RELEASED_OPT_ID"

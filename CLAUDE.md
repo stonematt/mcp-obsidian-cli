@@ -48,6 +48,20 @@ Key dependencies: `@modelcontextprotocol/sdk` (MCP protocol), `zod` (tool input 
 | `OBSIDIAN_TIMEOUT_MS` | `15000` | Command timeout |
 | `XDG_CONFIG_HOME` | `~/.config` | Config file base path |
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues + Milestones. PRDs/briefs live in `docs/briefs/`, not as issues. See [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md).
+
+### Triage labels
+
+Nitimini-style `status: *` lifecycle vocabulary; `afk-ready` is an orthogonal flag. See [`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md).
+
+### Domain docs
+
+Single-context. Glossary at [`CONTEXT.md`](./CONTEXT.md); briefs in `docs/briefs/`; ADRs in `docs/adr/` (created lazily). See [`docs/agents/domain.md`](./docs/agents/domain.md).
+
 <!-- GSD:workflow-start source:GSD defaults -->
 ## GSD Workflow Enforcement
 

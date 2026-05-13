@@ -1,0 +1,61 @@
+name: project-sync
+
+on:
+  issues:
+    types: [opened, reopened, labeled, unlabeled]
+
+permissions:
+  issues: read
+
+jobs:
+  sync:
+    if: github.event.issue.state != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync issue to project board
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PROJECT_ID: PVT_kwHOACsNbs4BXiQq
+          STATUS_FIELD_ID: PVTSSF_lAHOACsNbs4BXiQqzhSueMs
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+          LABELS_JSON: ${{ toJSON(github.event.issue.labels) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          declare -A OPT=(
+            [triage]="26ea1965"
+            [needs-info]="11bc9434"
+            [ready]="23bd140c"
+            [wip]="ecfe447c"
+            [blocked]="37dff9fb"
+            [staged]="805cb4a5"
+            [released]="91ff7738"
+          )
+
+          status=$(jq -r '
+            [.[] | .name | select(startswith("status:"))][0] // "status: triage"
+            | sub("status: *"; "")
+          ' <<< "$LABELS_JSON")
+
+          opt_id="${OPT[$status]:-${OPT[triage]}}"
+          echo "Issue status label: $status -> option $opt_id"
+
+          item_id=$(gh api graphql -f query='
+            mutation($projectId: ID!, $contentId: ID!) {
+              addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                item { id }
+              }
+            }' -f projectId="$PROJECT_ID" -f contentId="$ISSUE_NODE_ID" \
+            --jq '.data.addProjectV2ItemById.item.id')
+
+          gh api graphql -f query='
+            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optId: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $projectId
+                itemId: $itemId
+                fieldId: $fieldId
+                value: { singleSelectOptionId: $optId }
+              }) { projectV2Item { id } }
+            }' -f projectId="$PROJECT_ID" -f itemId="$item_id" \
+            -f fieldId="$STATUS_FIELD_ID" -f optId="$opt_id"
