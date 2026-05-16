@@ -33,6 +33,9 @@ import {
   errorResult,
   buildCliArgs,
   cliNotFoundMessage,
+  loadKnownVaults,
+  extractLeadingVault,
+  parseArgs,
 } from "./lib/helpers.js";
 
 const execFileAsync = promisify(execFile);
@@ -89,8 +92,41 @@ async function resolveCliPath(configured) {
 
 const config = loadConfig(CONFIG_FILE);
 const CLI = await resolveCliPath(config.cliPath);
-const VAULT = config.vault;
 const TIMEOUT_MS = config.timeoutMs;
+
+const OBSIDIAN_REGISTRY = join(
+  homedir(),
+  "Library/Application Support/obsidian/obsidian.json"
+);
+const KNOWN_VAULTS = loadKnownVaults(OBSIDIAN_REGISTRY);
+
+// Runtime vault selection. Held in process memory only — not persisted.
+// Initialized from config/env when that value names a known vault; otherwise
+// null, which triggers the prompt-on-first-use flow. Caller-supplied
+// `vault=NAME` in a generic `obsidian` call overrides + caches.
+let runtimeVault = null;
+if (config.vault) {
+  if (KNOWN_VAULTS.size === 0 || KNOWN_VAULTS.has(config.vault)) {
+    runtimeVault = config.vault;
+  } else {
+    console.error(
+      `Warning: configured OBSIDIAN_VAULT='${config.vault}' is not in Obsidian's known vaults ` +
+      `(${[...KNOWN_VAULTS].join(", ") || "<none detected>"}). ` +
+      `Server will ask which vault to use on first tool call.`
+    );
+  }
+}
+
+function vaultPromptResponse() {
+  const list = [...KNOWN_VAULTS].sort().map((v) => `  - ${v}`).join("\n");
+  return text(
+    `No vault selected. Available vaults:\n${list}\n\n` +
+    `Ask the user which vault to use, then either:\n` +
+    `  - retry through the generic \`obsidian\` tool with \`vault=NAME\` as the first token (e.g. \`vault=tyee read file="My Note"\`), or\n` +
+    `  - retry any convenience tool — the server will cache the vault from the first \`vault=\` override and reuse it for subsequent calls.\n\n` +
+    `If the user named a vault in conversation (e.g. "save this in tyee"), prepend \`vault=tyee\` automatically.`
+  );
+}
 
 const OBSIDIAN_PROCESS_PATTERN = "/Applications/Obsidian.app/Contents/MacOS/Obsidian$";
 const RUNNING_CACHE_TTL_MS = 5000;
@@ -121,7 +157,7 @@ async function checkObsidianRunning() {
  * Returns { stdout, stderr } or throws on non-zero exit / timeout.
  */
 async function run(input) {
-  const args = buildCliArgs(input, VAULT);
+  const args = buildCliArgs(input, runtimeVault);
 
   try {
     const { stdout, stderr } = await execFileAsync(CLI, args, {
@@ -165,6 +201,23 @@ async function runTool(input) {
       "OBSIDIAN_NOT_RUNNING"
     );
   }
+
+  // Cache caller-supplied vault override so subsequent convenience-tool calls
+  // route to the same vault without the caller having to repeat it.
+  const parsed = Array.isArray(input) ? input : parseArgs(input);
+  const callerVault = extractLeadingVault(parsed);
+  if (callerVault) {
+    if (KNOWN_VAULTS.size > 0 && !KNOWN_VAULTS.has(callerVault)) {
+      return errorResult(
+        `Unknown vault '${callerVault}'. Known vaults: ${[...KNOWN_VAULTS].sort().join(", ")}.`,
+        "VAULT_NOT_FOUND"
+      );
+    }
+    runtimeVault = callerVault;
+  } else if (!runtimeVault && KNOWN_VAULTS.size > 0) {
+    return vaultPromptResponse();
+  }
+
   const { stdout, stderr, error } = await run(input);
   if (error) {
     return errorResult(error.message, error.type);
@@ -181,7 +234,7 @@ async function runTool(input) {
 
 const server = new McpServer({
   name: "obsidian-mcp",
-  version: "1.2.1",
+  version: "1.3.0",
   capabilities: { tools: {} },
 });
 
@@ -193,9 +246,13 @@ server.tool(
 would on the terminal (minus the leading 'obsidian' binary name).
 
 IMPORTANT: when multiple vaults are loaded, the CLI's vault= argument must
-be the FIRST token. The server auto-prepends vault=<OBSIDIAN_VAULT> when
-configured; if you include vault= manually in this command string, put it
-first or the CLI silently routes to the focused vault.
+be the FIRST token. The server auto-prepends vault=<runtimeVault> once a
+vault has been selected; if you include vault= manually in this command
+string, put it first or the CLI silently routes to the focused vault.
+
+VAULT ROUTING: if the user names a vault in conversation (e.g. "save this
+in tyee", "scarp note"), prepend \`vault=NAME \` as the first token. The
+server caches that selection in memory for subsequent calls.
 
 Examples:
   "daily:read"
