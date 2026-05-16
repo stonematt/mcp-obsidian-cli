@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish to npm + MCP Registry
 on:
   push:
     tags: ["v*"]
@@ -6,7 +6,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -16,6 +16,34 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm test
-      - run: npm publish --provenance --access public
+      - name: Publish to npm
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - name: Sync server.json version with git tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('server.json','utf8'));s.version=process.argv[1];s.packages[0].version=process.argv[1];fs.writeFileSync('server.json',JSON.stringify(s,null,2)+'\n');" "$VERSION"
+      - name: Authenticate to MCP Registry (OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
+      - name: Create GitHub Release from CHANGELOG section
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          NOTES=$(awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { flag=1; next }
+            flag && /^## \[/ { exit }
+            flag { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' -e ':a' -e '/^$/{$d;N;ba' -e '}')
+          if [ -z "$NOTES" ]; then
+            echo "No CHANGELOG section found for $VERSION; falling back to auto-generated notes."
+            gh release create "v$VERSION" --title "v$VERSION" --generate-notes
+          else
+            gh release create "v$VERSION" --title "v$VERSION" --notes "$NOTES"
+          fi
