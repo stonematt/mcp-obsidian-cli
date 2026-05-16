@@ -10,6 +10,8 @@
 
 ### Added
 - 5s cache on `checkObsidianRunning` to avoid repeated `pgrep` on rapid back-to-back tool calls.
+- `buildCliArgs(input, vault)` helper that skips the configured-vault prepend when the caller already supplied a `vault=` token as the first arg, so per-call vault overrides via the generic `obsidian` tool work as documented (PR #22 review).
+- `cliNotFoundMessage(cli)` helper so the ENOENT error now names the actual configured binary (`obsidian-cli` by default) instead of the deprecated `'obsidian'` literal (PR #22 review).
 
 ## [1.2.0] - 2026-04-11
 

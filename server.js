@@ -27,7 +27,13 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { exec } from "node:child_process";
-import { loadConfig, parseArgs, text, errorResult } from "./lib/helpers.js";
+import {
+  loadConfig,
+  text,
+  errorResult,
+  buildCliArgs,
+  cliNotFoundMessage,
+} from "./lib/helpers.js";
 
 const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
@@ -115,8 +121,7 @@ async function checkObsidianRunning() {
  * Returns { stdout, stderr } or throws on non-zero exit / timeout.
  */
 async function run(input) {
-  const args = Array.isArray(input) ? [...input] : parseArgs(input);
-  if (VAULT) args.unshift(`vault=${VAULT}`);
+  const args = buildCliArgs(input, VAULT);
 
   try {
     const { stdout, stderr } = await execFileAsync(CLI, args, {
@@ -132,7 +137,7 @@ async function run(input) {
         stderr: '',
         error: {
           type: 'CLI_NOT_FOUND',
-          message: `Obsidian CLI not found at: ${CLI}. Set OBSIDIAN_CLI_PATH or ensure 'obsidian' is on PATH.`
+          message: cliNotFoundMessage(CLI),
         }
       };
     }
