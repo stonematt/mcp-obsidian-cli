@@ -116,7 +116,7 @@ async function checkObsidianRunning() {
  */
 async function run(input) {
   const args = Array.isArray(input) ? [...input] : parseArgs(input);
-  if (VAULT) args.push(`vault=${VAULT}`);
+  if (VAULT) args.unshift(`vault=${VAULT}`);
 
   try {
     const { stdout, stderr } = await execFileAsync(CLI, args, {
@@ -186,6 +186,12 @@ server.tool(
   "obsidian",
   `Run any Obsidian CLI command. Pass the full command string exactly as you
 would on the terminal (minus the leading 'obsidian' binary name).
+
+IMPORTANT: when multiple vaults are loaded, the CLI's vault= argument must
+be the FIRST token. The server auto-prepends vault=<OBSIDIAN_VAULT> when
+configured; if you include vault= manually in this command string, put it
+first or the CLI silently routes to the focused vault.
+
 Examples:
   "daily:read"
   "search:context query=\"meeting notes\" limit=5"
@@ -193,6 +199,7 @@ Examples:
   "tags counts sort=count"
   "tasks daily"
   "property:read name=status path=\"1p/my-project/my-project.md\""
+  "vault=tyee read file=\"My Note\""   # explicit vault override, first
   "help search"`,
   { command: z.string().describe("CLI command and arguments") },
   async ({ command }) => runTool(command),
