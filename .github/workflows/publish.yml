@@ -1,6 +1,7 @@
 name: Publish to npm + MCP Registry
 on:
   push:
+    branches: [master]
     tags: ["v*"]
 jobs:
   publish:
@@ -10,32 +11,65 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine version and tag if needed
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Tag-triggered run for v$VERSION"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+              echo "Tag v$VERSION already exists; nothing to publish."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "New version detected: v$VERSION. Creating tag."
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git tag "v$VERSION"
+              git push origin "v$VERSION"
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
+        if: steps.ver.outputs.skip != 'true'
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
       - run: npm ci
+        if: steps.ver.outputs.skip != 'true'
       - run: npm test
+        if: steps.ver.outputs.skip != 'true'
       - name: Publish to npm
+        if: steps.ver.outputs.skip != 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Install mcp-publisher
+        if: steps.ver.outputs.skip != 'true'
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
       - name: Sync server.json version with git tag
+        if: steps.ver.outputs.skip != 'true'
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION="${{ steps.ver.outputs.version }}"
           node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('server.json','utf8'));s.version=process.argv[1];s.packages[0].version=process.argv[1];fs.writeFileSync('server.json',JSON.stringify(s,null,2)+'\n');" "$VERSION"
       - name: Authenticate to MCP Registry (OIDC)
+        if: steps.ver.outputs.skip != 'true'
         run: ./mcp-publisher login github-oidc
       - name: Publish to MCP Registry
+        if: steps.ver.outputs.skip != 'true'
         run: ./mcp-publisher publish
       - name: Create GitHub Release from CHANGELOG section
+        if: steps.ver.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION="${{ steps.ver.outputs.version }}"
           NOTES=$(awk -v v="$VERSION" '
             $0 ~ "^## \\[" v "\\]" { flag=1; next }
             flag && /^## \[/ { exit }
