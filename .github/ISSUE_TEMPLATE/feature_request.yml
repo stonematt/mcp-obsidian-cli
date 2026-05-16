@@ -1,0 +1,29 @@
+name: Feature request
+description: A tool, prompt, or behavior you'd like to see
+title: "[feat] "
+labels:
+  - enhancement
+  - "status: triage"
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Describe the use case. "I want to do X but currently I have to do Y" is ideal.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape (optional)
+      description: A sketch of the tool name, args, or CLI command this would map to. Skip if you don't know the internals.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: What you do today instead. Helps gauge priority.
+    validations:
+      required: false

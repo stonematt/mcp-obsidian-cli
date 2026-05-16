@@ -1,0 +1,91 @@
+name: Bug report
+description: Something broken or surprising while using mcp-obsidian-cli
+title: "[bug] "
+labels:
+  - bug
+  - "status: triage"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The more concrete this is — the version, the exact tool call, what came back — the faster it's fixable.
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: Output of `npx mcp-obsidian-cli --version`, or the `mcp-obsidian-cli@X.Y.Z` you have pinned in Claude Desktop config.
+      placeholder: "1.3.0"
+    validations:
+      required: true
+  - type: input
+    id: obsidian-version
+    attributes:
+      label: Obsidian version
+      description: Help → About in Obsidian. Include CLI plugin version if you know it.
+      placeholder: "1.5.12, CLI plugin 0.4.2"
+    validations:
+      required: false
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      description: Which app is calling the server?
+      placeholder: "Claude Desktop 0.7.x / Claude Code / other"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, what did you get?
+      placeholder: |
+        I called obsidian_search with query="..."
+        Expected: results from my Projects/ folder
+        Got: empty array, no error
+    validations:
+      required: true
+  - type: textarea
+    id: tool-call
+    attributes:
+      label: Tool call (if applicable)
+      description: The exact tool name + args you used. Copy from Claude Desktop's tool-call inspector or your conversation.
+      render: json
+      placeholder: |
+        {
+          "tool": "obsidian_search",
+          "args": { "query": "test", "path": "Projects/" }
+        }
+    validations:
+      required: false
+  - type: textarea
+    id: response
+    attributes:
+      label: Response / error
+      description: What the server returned. Redact any private vault content before pasting.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: Relevant env vars or config.yaml entries. Redact paths / vault names if private.
+      render: yaml
+      placeholder: |
+        OBSIDIAN_VAULT: my-vault
+        # ~/.config/mcp-obsidian-cli/config.yaml:
+        cliPath: obsidian-cli
+        timeoutMs: 15000
+    validations:
+      required: false
