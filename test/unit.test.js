@@ -73,7 +73,7 @@ describe("loadConfig", () => {
     try {
       const cfg = loadConfig("/nonexistent/path/config.yaml");
       assert.equal(cfg.vault, "");
-      assert.equal(cfg.cliPath, "obsidian");
+      assert.equal(cfg.cliPath, "obsidian-cli");
       assert.equal(cfg.timeoutMs, 15000);
     } finally {
       restoreEnv();

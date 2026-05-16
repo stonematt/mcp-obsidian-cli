@@ -7,7 +7,7 @@
  * common operations (read, search, daily, tasks, properties, etc.).
  *
  * Environment variables:
- *   OBSIDIAN_CLI_PATH    - Path to the obsidian CLI binary (default: "obsidian")
+ *   OBSIDIAN_CLI_PATH    - Path to the obsidian CLI binary (default: "obsidian-cli")
  *   OBSIDIAN_VAULT       - Vault name to use (default: "")
  *   OBSIDIAN_TIMEOUT_MS  - Command timeout in ms (default: 15000)
  *
@@ -48,16 +48,17 @@ const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
 
 
 const KNOWN_CLI_PATHS = [
-  "/Applications/Obsidian.app/Contents/MacOS/obsidian",
-  join(homedir(), "Applications/Obsidian.app/Contents/MacOS/obsidian"),
+  "/Applications/Obsidian.app/Contents/MacOS/obsidian-cli",
+  join(homedir(), "Applications/Obsidian.app/Contents/MacOS/obsidian-cli"),
 ];
 
 async function resolveCliPath(configured) {
-  if (configured !== "obsidian") return configured;
+  if (configured !== "obsidian-cli") return configured;
 
   try {
-    await execAsync("which obsidian", { timeout: 2000 });
-    return configured;
+    const { stdout } = await execFileAsync("which", ["obsidian-cli"], { timeout: 2000 });
+    const resolved = stdout.trim();
+    if (resolved) return resolved;
   } catch { /* not on PATH */ }
 
   for (const p of KNOWN_CLI_PATHS) {
@@ -70,8 +71,11 @@ async function resolveCliPath(configured) {
       ["-lf", "/Applications/Obsidian.app/Contents/MacOS/Obsidian$"],
       { timeout: 2000 }
     );
-    const match = stdout.match(/(\S*\/Contents\/MacOS\/obsidian)/i);
-    if (match && existsSync(match[1])) return match[1];
+    const match = stdout.match(/(\S*\/Contents\/MacOS\/)Obsidian/i);
+    if (match) {
+      const cliPath = `${match[1]}obsidian-cli`;
+      if (existsSync(cliPath)) return cliPath;
+    }
   } catch { /* no running process */ }
 
   return configured;
