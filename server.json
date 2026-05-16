@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.stonematt/mcp-obsidian-cli",
-  "description": "MCP server wrapping the Obsidian CLI — full native API access (search, wikilink resolution, tasks, properties, daily notes, backlinks, 80+ commands) over the Model Context Protocol.",
+  "description": "MCP server wrapping the Obsidian CLI — full native API access over the Model Context Protocol.",
   "repository": {
     "url": "https://github.com/stonematt/mcp-obsidian-cli",
     "source": "github"
