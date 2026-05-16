@@ -3,7 +3,14 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { parseArgs, loadConfig, text, errorResult } from "../lib/helpers.js";
+import {
+  parseArgs,
+  loadConfig,
+  text,
+  errorResult,
+  buildCliArgs,
+  cliNotFoundMessage,
+} from "../lib/helpers.js";
 
 // ---------------------------------------------------------------------------
 // parseArgs
@@ -73,7 +80,7 @@ describe("loadConfig", () => {
     try {
       const cfg = loadConfig("/nonexistent/path/config.yaml");
       assert.equal(cfg.vault, "");
-      assert.equal(cfg.cliPath, "obsidian");
+      assert.equal(cfg.cliPath, "obsidian-cli");
       assert.equal(cfg.timeoutMs, 15000);
     } finally {
       restoreEnv();
@@ -149,5 +156,63 @@ describe("errorResult", () => {
       content: [{ type: "text", text: "something broke" }],
       isError: true,
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildCliArgs
+// ---------------------------------------------------------------------------
+
+describe("buildCliArgs", () => {
+  it("prepends vault= when configured and absent", () => {
+    assert.deepStrictEqual(
+      buildCliArgs("read file=foo.md", "my-vault"),
+      ["vault=my-vault", "read", "file=foo.md"],
+    );
+  });
+
+  it("does not prepend when vault unset", () => {
+    assert.deepStrictEqual(
+      buildCliArgs("read file=foo.md", ""),
+      ["read", "file=foo.md"],
+    );
+  });
+
+  it("does not duplicate vault= when caller already supplied one", () => {
+    assert.deepStrictEqual(
+      buildCliArgs("vault=other read file=foo.md", "my-vault"),
+      ["vault=other", "read", "file=foo.md"],
+    );
+  });
+
+  it("accepts an array input", () => {
+    assert.deepStrictEqual(
+      buildCliArgs(["read", "file=foo.md"], "my-vault"),
+      ["vault=my-vault", "read", "file=foo.md"],
+    );
+  });
+
+  it("respects caller vault= in array input", () => {
+    assert.deepStrictEqual(
+      buildCliArgs(["vault=other", "read"], "my-vault"),
+      ["vault=other", "read"],
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cliNotFoundMessage
+// ---------------------------------------------------------------------------
+
+describe("cliNotFoundMessage", () => {
+  it("names the configured CLI binary in the error", () => {
+    const msg = cliNotFoundMessage("obsidian-cli");
+    assert.match(msg, /obsidian-cli/);
+    assert.match(msg, /OBSIDIAN_CLI_PATH/);
+  });
+
+  it("does not reference the deprecated 'obsidian' binary", () => {
+    const msg = cliNotFoundMessage("obsidian-cli");
+    assert.doesNotMatch(msg, /ensure 'obsidian' is on PATH/);
   });
 });

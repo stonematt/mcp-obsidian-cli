@@ -1,17 +1,13 @@
-import { spawn, execSync } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { test, describe } from "node:test";
 
-/**
- * Auto-detect whether Obsidian is running using the same ps aux check
- * the server uses, so tests don't need a manual env var.
- */
 function isObsidianRunning() {
   try {
-    const out = execSync(
-      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
-      { timeout: 2000, encoding: "utf8" }
-    );
-    return out.includes("/Applications/Obsidian.app");
+    execFileSync("pgrep", ["-f", "/Applications/Obsidian.app/Contents/MacOS/Obsidian$"], {
+      timeout: 2000,
+      stdio: "ignore",
+    });
+    return true;
   } catch {
     return false;
   }
@@ -19,68 +15,57 @@ function isObsidianRunning() {
 
 const obsidianRunning = isObsidianRunning();
 
-describe("health check", () => {
-  test("exits 1 if Obsidian not running", { skip: obsidianRunning && "Obsidian is running" }, async () => {
-    const serverPath = new URL("../server.js", import.meta.url).pathname;
-    const proc = spawn("node", [serverPath], {
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 10000,
-    });
-
-    let stderr = "";
-    proc.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-
-    const exitCode = await new Promise((resolve) => {
-      proc.on("close", (code) => {
-        setTimeout(() => resolve(code), 50);
-      });
-      proc.on("error", () => resolve(1));
-      setTimeout(() => resolve(1), 5000);
-    });
-
-    if (exitCode !== 1) {
-      throw new Error(`Expected exit code 1, got ${exitCode}`);
-    }
-    if (!stderr.includes("Obsidian is not running")) {
-      throw new Error(`Expected "Obsidian is not running" in stderr, got: ${stderr}`);
-    }
+async function runServerOnce() {
+  const serverPath = new URL("../server.js", import.meta.url).pathname;
+  const proc = spawn("node", [serverPath], {
+    stdio: ["pipe", "pipe", "pipe"],
+    timeout: 10000,
   });
 
-  test("succeeds if Obsidian running", { skip: !obsidianRunning && "Obsidian is not running" }, async () => {
-    const serverPath = new URL("../server.js", import.meta.url).pathname;
-    const proc = spawn("node", [serverPath], {
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 10000,
+  let stderr = "";
+  proc.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+
+  await new Promise((resolve) => {
+    proc.stderr.on("data", () => {
+      setTimeout(() => {
+        proc.stdin.end();
+        resolve();
+      }, 100);
     });
+    setTimeout(resolve, 3000);
+  });
 
-    let stderr = "";
-    proc.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+  const exitCode = await new Promise((resolve) => {
+    proc.on("close", (code) => setTimeout(() => resolve(code), 50));
+    proc.on("error", () => resolve(1));
+    setTimeout(() => resolve(1), 5000);
+  });
 
-    // Wait for the server to emit its startup message, then close stdin
-    // so the MCP transport shuts down and the process exits cleanly.
-    await new Promise((resolve) => {
-      proc.stderr.on("data", () => {
-        setTimeout(() => {
-          proc.stdin.end();
-          resolve();
-        }, 100);
-      });
-      setTimeout(resolve, 3000);
-    });
+  return { exitCode, stderr };
+}
 
-    const exitCode = await new Promise((resolve) => {
-      proc.on("close", (code) => {
-        setTimeout(() => resolve(code), 50);
-      });
-      proc.on("error", () => resolve(1));
-      setTimeout(() => resolve(1), 5000);
-    });
-
+describe("startup", () => {
+  test("connects and exits cleanly regardless of Obsidian state", async () => {
+    const { exitCode, stderr } = await runServerOnce();
     if (exitCode !== 0) {
-      throw new Error(`Expected exit code 0, got ${exitCode}`);
+      throw new Error(`Expected exit code 0, got ${exitCode}. stderr: ${stderr}`);
     }
     if (!stderr.includes("obsidian-mcp server running")) {
       throw new Error(`Expected "obsidian-mcp server running" in stderr, got: ${stderr}`);
+    }
+  });
+
+  test("warns on stderr when Obsidian is not running", { skip: obsidianRunning && "Obsidian is running" }, async () => {
+    const { stderr } = await runServerOnce();
+    if (!stderr.includes("Obsidian.app not detected")) {
+      throw new Error(`Expected "Obsidian.app not detected" warning in stderr, got: ${stderr}`);
+    }
+  });
+
+  test("no warning when Obsidian is running", { skip: !obsidianRunning && "Obsidian is not running" }, async () => {
+    const { stderr } = await runServerOnce();
+    if (stderr.includes("Obsidian.app not detected")) {
+      throw new Error(`Unexpected "not detected" warning when Obsidian is running. stderr: ${stderr}`);
     }
   });
 });
