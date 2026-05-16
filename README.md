@@ -37,7 +37,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ## Requirements
 
 - Obsidian running with the CLI plugin active
-- `obsidian` on your PATH
+- `obsidian-cli` on your PATH (typically `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli` on macOS)
 - Node.js >= 18
 
 ## How it works
@@ -67,7 +67,7 @@ The generic `obsidian` tool means the MCP server never falls behind the CLI — 
 | Variable | Default | Description |
 |---|---|---|
 | `OBSIDIAN_VAULT` | _(none)_ | Target vault by name |
-| `OBSIDIAN_CLI_PATH` | `obsidian` | Path to CLI binary |
+| `OBSIDIAN_CLI_PATH` | `obsidian-cli` | Path to CLI binary |
 | `OBSIDIAN_TIMEOUT_MS` | `15000` | Command timeout |
 | `XDG_CONFIG_HOME` | `~/.config` | Base path for config file |
 
@@ -81,7 +81,7 @@ The server can read settings from a YAML config file:
 Config file format:
 ```yaml
 vault: "my-vault"
-cliPath: "obsidian"
+cliPath: "obsidian-cli"
 timeoutMs: 15000
 ```
 

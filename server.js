@@ -7,7 +7,7 @@
  * common operations (read, search, daily, tasks, properties, etc.).
  *
  * Environment variables:
- *   OBSIDIAN_CLI_PATH    - Path to the obsidian CLI binary (default: "obsidian")
+ *   OBSIDIAN_CLI_PATH    - Path to the obsidian CLI binary (default: "obsidian-cli")
  *   OBSIDIAN_VAULT       - Vault name to use (default: "")
  *   OBSIDIAN_TIMEOUT_MS  - Command timeout in ms (default: 15000)
  *
@@ -27,7 +27,16 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { exec } from "node:child_process";
-import { loadConfig, parseArgs, text, errorResult } from "./lib/helpers.js";
+import {
+  loadConfig,
+  text,
+  errorResult,
+  buildCliArgs,
+  cliNotFoundMessage,
+  loadKnownVaults,
+  extractLeadingVault,
+  parseArgs,
+} from "./lib/helpers.js";
 
 const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
@@ -48,16 +57,17 @@ const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
 
 
 const KNOWN_CLI_PATHS = [
-  "/Applications/Obsidian.app/Contents/MacOS/obsidian",
-  join(homedir(), "Applications/Obsidian.app/Contents/MacOS/obsidian"),
+  "/Applications/Obsidian.app/Contents/MacOS/obsidian-cli",
+  join(homedir(), "Applications/Obsidian.app/Contents/MacOS/obsidian-cli"),
 ];
 
 async function resolveCliPath(configured) {
-  if (configured !== "obsidian") return configured;
+  if (configured !== "obsidian-cli") return configured;
 
   try {
-    await execAsync("which obsidian", { timeout: 2000 });
-    return configured;
+    const { stdout } = await execFileAsync("which", ["obsidian-cli"], { timeout: 2000 });
+    const resolved = stdout.trim();
+    if (resolved) return resolved;
   } catch { /* not on PATH */ }
 
   for (const p of KNOWN_CLI_PATHS) {
@@ -65,12 +75,16 @@ async function resolveCliPath(configured) {
   }
 
   try {
-    const { stdout } = await execAsync(
-      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
+    const { stdout } = await execFileAsync(
+      "pgrep",
+      ["-lf", "/Applications/Obsidian.app/Contents/MacOS/Obsidian$"],
       { timeout: 2000 }
     );
-    const match = stdout.match(/(\S*\/Contents\/MacOS\/obsidian)/i);
-    if (match && existsSync(match[1])) return match[1];
+    const match = stdout.match(/(\S*\/Contents\/MacOS\/)Obsidian/i);
+    if (match) {
+      const cliPath = `${match[1]}obsidian-cli`;
+      if (existsSync(cliPath)) return cliPath;
+    }
   } catch { /* no running process */ }
 
   return configured;
@@ -78,19 +92,60 @@ async function resolveCliPath(configured) {
 
 const config = loadConfig(CONFIG_FILE);
 const CLI = await resolveCliPath(config.cliPath);
-const VAULT = config.vault;
 const TIMEOUT_MS = config.timeoutMs;
 
-async function checkObsidianRunning() {
-  try {
-    const { stdout } = await execAsync(
-      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
-      { timeout: 2000 }
+const OBSIDIAN_REGISTRY = join(
+  homedir(),
+  "Library/Application Support/obsidian/obsidian.json"
+);
+const KNOWN_VAULTS = loadKnownVaults(OBSIDIAN_REGISTRY);
+
+// Runtime vault selection. Held in process memory only — not persisted.
+// Initialized from config/env when that value names a known vault; otherwise
+// null, which triggers the prompt-on-first-use flow. Caller-supplied
+// `vault=NAME` in a generic `obsidian` call overrides + caches.
+let runtimeVault = null;
+if (config.vault) {
+  if (KNOWN_VAULTS.size === 0 || KNOWN_VAULTS.has(config.vault)) {
+    runtimeVault = config.vault;
+  } else {
+    console.error(
+      `Warning: configured OBSIDIAN_VAULT='${config.vault}' is not in Obsidian's known vaults ` +
+      `(${[...KNOWN_VAULTS].join(", ") || "<none detected>"}). ` +
+      `Server will ask which vault to use on first tool call.`
     );
-    return stdout.includes("/Applications/Obsidian.app");
-  } catch {
-    return false;
   }
+}
+
+function vaultPromptResponse() {
+  const list = [...KNOWN_VAULTS].sort().map((v) => `  - ${v}`).join("\n");
+  return text(
+    `No vault selected. Available vaults:\n${list}\n\n` +
+    `Ask the user which vault to use, then either:\n` +
+    `  - retry through the generic \`obsidian\` tool with \`vault=NAME\` as the first token (e.g. \`vault=tyee read file="My Note"\`), or\n` +
+    `  - retry any convenience tool — the server will cache the vault from the first \`vault=\` override and reuse it for subsequent calls.\n\n` +
+    `If the user named a vault in conversation (e.g. "save this in tyee"), prepend \`vault=tyee\` automatically.`
+  );
+}
+
+const OBSIDIAN_PROCESS_PATTERN = "/Applications/Obsidian.app/Contents/MacOS/Obsidian$";
+const RUNNING_CACHE_TTL_MS = 5000;
+let runningCache = { value: null, at: 0 };
+
+async function checkObsidianRunning() {
+  const now = Date.now();
+  if (runningCache.value !== null && now - runningCache.at < RUNNING_CACHE_TTL_MS) {
+    return runningCache.value;
+  }
+  let running = false;
+  try {
+    await execFileAsync("pgrep", ["-f", OBSIDIAN_PROCESS_PATTERN], { timeout: 2000 });
+    running = true;
+  } catch {
+    running = false;
+  }
+  runningCache = { value: running, at: now };
+  return running;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,8 +157,7 @@ async function checkObsidianRunning() {
  * Returns { stdout, stderr } or throws on non-zero exit / timeout.
  */
 async function run(input) {
-  const args = Array.isArray(input) ? [...input] : parseArgs(input);
-  if (VAULT) args.push(`vault=${VAULT}`);
+  const args = buildCliArgs(input, runtimeVault);
 
   try {
     const { stdout, stderr } = await execFileAsync(CLI, args, {
@@ -119,7 +173,7 @@ async function run(input) {
         stderr: '',
         error: {
           type: 'CLI_NOT_FOUND',
-          message: `Obsidian CLI not found at: ${CLI}. Set OBSIDIAN_CLI_PATH or ensure 'obsidian' is on PATH.`
+          message: cliNotFoundMessage(CLI),
         }
       };
     }
@@ -141,6 +195,29 @@ async function run(input) {
 
 /** Run CLI, return MCP result. Accepts a command string or an args array. */
 async function runTool(input) {
+  if (!(await checkObsidianRunning())) {
+    return errorResult(
+      "Obsidian.app is not running. Open Obsidian and retry — no Claude Desktop restart needed.",
+      "OBSIDIAN_NOT_RUNNING"
+    );
+  }
+
+  // Cache caller-supplied vault override so subsequent convenience-tool calls
+  // route to the same vault without the caller having to repeat it.
+  const parsed = Array.isArray(input) ? input : parseArgs(input);
+  const callerVault = extractLeadingVault(parsed);
+  if (callerVault) {
+    if (KNOWN_VAULTS.size > 0 && !KNOWN_VAULTS.has(callerVault)) {
+      return errorResult(
+        `Unknown vault '${callerVault}'. Known vaults: ${[...KNOWN_VAULTS].sort().join(", ")}.`,
+        "VAULT_NOT_FOUND"
+      );
+    }
+    runtimeVault = callerVault;
+  } else if (!runtimeVault && KNOWN_VAULTS.size > 0) {
+    return vaultPromptResponse();
+  }
+
   const { stdout, stderr, error } = await run(input);
   if (error) {
     return errorResult(error.message, error.type);
@@ -157,7 +234,7 @@ async function runTool(input) {
 
 const server = new McpServer({
   name: "obsidian-mcp",
-  version: "1.2.0",
+  version: "1.3.0",
   capabilities: { tools: {} },
 });
 
@@ -167,6 +244,16 @@ server.tool(
   "obsidian",
   `Run any Obsidian CLI command. Pass the full command string exactly as you
 would on the terminal (minus the leading 'obsidian' binary name).
+
+IMPORTANT: when multiple vaults are loaded, the CLI's vault= argument must
+be the FIRST token. The server auto-prepends vault=<runtimeVault> once a
+vault has been selected; if you include vault= manually in this command
+string, put it first or the CLI silently routes to the focused vault.
+
+VAULT ROUTING: if the user names a vault in conversation (e.g. "save this
+in tyee", "scarp note"), prepend \`vault=NAME \` as the first token. The
+server caches that selection in memory for subsequent calls.
+
 Examples:
   "daily:read"
   "search:context query=\"meeting notes\" limit=5"
@@ -174,6 +261,7 @@ Examples:
   "tags counts sort=count"
   "tasks daily"
   "property:read name=status path=\"1p/my-project/my-project.md\""
+  "vault=tyee read file=\"My Note\""   # explicit vault override, first
   "help search"`,
   { command: z.string().describe("CLI command and arguments") },
   async ({ command }) => runTool(command),
@@ -410,8 +498,9 @@ for (const [name, content] of Object.entries(promptContent)) {
 async function main() {
   const running = await checkObsidianRunning();
   if (!running) {
-    console.error("Error: Obsidian is not running. Please open Obsidian and try again.");
-    process.exit(1);
+    console.error(
+      "Warning: Obsidian.app not detected. Server will accept connections; tool calls will fail until Obsidian is opened."
+    );
   }
   const transport = new StdioServerTransport();
   console.error("obsidian-mcp server running on stdio");

@@ -3,11 +3,15 @@ Run these tests against the obsidian MCP server and report results. For each tes
 ## Instructions
 
 For each test:
-1. Call the tool with the exact parameters shown
-2. Record whether the call succeeded or errored
-3. Quote the **first 5 lines** of the response as a content sample
-4. Check each pass criterion individually (yes/no)
-5. If any criterion fails, quote what you got instead
+1. Record start timestamp (ISO 8601 with ms, e.g. `2026-05-16T14:23:11.482Z`)
+2. Call the tool with the exact parameters shown
+3. Record end timestamp; compute `elapsed_ms` = end − start
+4. Record whether the call succeeded or errored
+5. Quote the **first 5 lines** of the response as a content sample
+6. Check each pass criterion individually (yes/no)
+7. If any criterion fails, quote what you got instead
+8. Assign a **Value** score 1–5 for how useful this test was at exercising server behavior (1 = trivial/duplicate, 5 = caught real risk or covered unique surface)
+9. Add a one-line **Value note** explaining the score (what this test uniquely verifies, what it would catch on regression)
 
 ## Tests
 
@@ -32,10 +36,11 @@ Pass criteria:
 ### T3: Help — Bases reference
 Action: Call obsidian_help({ topic: "bases" }).
 Pass criteria:
-- [ ] Contains filter operators (at least 3 of: is, contains, before, after, gt, lt)
+- [ ] Contains comparison operators (at least 3 of: `==`, `!=`, `>`, `<`, `>=`, `<=`)
+- [ ] Contains filter functions (at least 2 of: `file.hasTag`, `file.inFolder`, `file.hasLink`)
 - [ ] Contains formula functions (now(), date())
 - [ ] Contains view types: table, cards, list
-- [ ] Contains summary functions (at least 3 of: sum, avg, count, min, max)
+- [ ] Contains summary functions (at least 3 of: Sum, Average, Min, Max, Median, Unique, Filled, Checked)
 - [ ] Contains at least one complete .base YAML example (multi-line YAML block)
 
 ### T4: Help — Canvas reference
@@ -104,6 +109,27 @@ Pass criteria:
 - [ ] Body contains "quoted string" with actual double quotes (not backslash-escaped)
 Cleanup: After verifying, call obsidian({ command: "delete path=0.inbox/sniff-test-create.md" }) to remove the test file.
 
+### T12: Vault override — create note in `tyee`
+Exercises the recent fix that lets the caller pass `vault=<name>` as the first token to route a command to a non-default vault.
+Action: Call obsidian({ command: "vault=tyee create path=0.inbox/sniff-test-tyee.md content=\"# Sniff Test (tyee)\\n\\nVault override smoke test.\"" }).
+Then call obsidian({ command: "vault=tyee read path=0.inbox/sniff-test-tyee.md" }) to verify.
+Pass criteria:
+- [ ] Create succeeds without error
+- [ ] Read returns the file content (heading + body line)
+- [ ] Content includes "# Sniff Test (tyee)"
+- [ ] No "vault not found" / routing error from CLI
+Cleanup: Call obsidian({ command: "vault=tyee delete path=0.inbox/sniff-test-tyee.md" }).
+
+### T13: Vault override — create note in `scarp`
+Action: Call obsidian({ command: "vault=scarp create path=0.inbox/sniff-test-scarp.md content=\"# Sniff Test (scarp)\\n\\nVault override smoke test.\"" }).
+Then call obsidian({ command: "vault=scarp read path=0.inbox/sniff-test-scarp.md" }) to verify.
+Pass criteria:
+- [ ] Create succeeds without error
+- [ ] Read returns the file content (heading + body line)
+- [ ] Content includes "# Sniff Test (scarp)"
+- [ ] No "vault not found" / routing error from CLI
+Cleanup: Call obsidian({ command: "vault=scarp delete path=0.inbox/sniff-test-scarp.md" }).
+
 ## Report Format
 
 ### Per-test detail
@@ -113,18 +139,30 @@ For each test, report:
 ```
 #### T{N}: {Name} — {✓ PASS | ✗ FAIL}
 Tool call: {exact call made}
+Started: {ISO ts}
+Elapsed: {ms} ms
 Status: {success | error}
 Sample: {first 5 lines of response, in a code block}
 Criteria:
 - [x] or [ ] {criterion} — {brief note if failed}
+Value: {1-5}
+Value note: {one line — what this uniquely verifies / what regression it catches}
 ```
 
 ### Summary table
 
-| Test | Name | Result | Criteria | Comment |
-|------|------|--------|----------|---------|
-| T1 | Help — CLI reference | ✓/✗ | 5/5 | one-line note |
-| T2 | Help — Markdown reference | ✓/✗ | 5/5 | ... |
-| ... | ... | ... | ... | ... |
+| Test | Name | Result | Criteria | Elapsed (ms) | Value | Value note |
+|------|------|--------|----------|--------------|-------|------------|
+| T1 | Help — CLI reference | ✓/✗ | 5/5 | 123 | 3 | docs surface only |
+| T2 | Help — Markdown reference | ✓/✗ | 5/5 | ... | ... | ... |
+| ... | ... | ... | ... | ... | ... | ... |
 
-**X/11 passed.** Flag anything surprising or any criteria that partially failed.
+### Aggregate metrics
+
+After the table, report:
+- **X/13 passed.**
+- **Total elapsed:** sum of all `elapsed_ms` (in seconds)
+- **Slowest test:** name + ms
+- **Lowest-value tests (Value ≤ 2):** list — candidates to drop or merge
+- **Highest-value tests (Value = 5):** list — protect these
+- Flag anything surprising or any criteria that partially failed
