@@ -6,7 +6,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -31,3 +31,19 @@ jobs:
         run: ./mcp-publisher login github-oidc
       - name: Publish to MCP Registry
         run: ./mcp-publisher publish
+      - name: Create GitHub Release from CHANGELOG section
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          NOTES=$(awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { flag=1; next }
+            flag && /^## \[/ { exit }
+            flag { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' -e ':a' -e '/^$/{$d;N;ba' -e '}')
+          if [ -z "$NOTES" ]; then
+            echo "No CHANGELOG section found for $VERSION; falling back to auto-generated notes."
+            gh release create "v$VERSION" --title "v$VERSION" --generate-notes
+          else
+            gh release create "v$VERSION" --title "v$VERSION" --notes "$NOTES"
+          fi

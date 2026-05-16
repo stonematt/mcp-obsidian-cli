@@ -8,6 +8,7 @@
 - `mcpName: io.github.stonematt/mcp-obsidian-cli` in `package.json` so the registry can verify the published npm metadata.
 - GitHub issue templates (bug report, feature request) — required fields capture version, MCP client, exact tool call, response, so reports arrive triage-ready (zero external issues to date suggests reporting friction is the bottleneck, not bug-free code).
 - `README.md` "Bugs / requests" section linking to the new template chooser.
+- GitHub Release auto-created on each tag from the corresponding CHANGELOG section. Single source of truth — release notes on GitHub mirror the hand-written changelog rather than auto-generating from PR titles.
 
 ## [1.3.0] - 2026-05-16
 
