@@ -101,6 +101,10 @@ Config precedence: env vars > config file > hardcoded defaults
 | Obsidian plugins | CLI plugin | REST API plugin | None |
 | Commands | 80+ | ~10 | ~6 |
 
+## Bugs / requests
+
+File an issue: https://github.com/stonematt/mcp-obsidian-cli/issues/new/choose. Bug template asks for version, MCP client, tool call, and response — quick to fill, fast to act on.
+
 ## License
 
 MIT
