@@ -65,8 +65,9 @@ async function resolveCliPath(configured) {
   }
 
   try {
-    const { stdout } = await execAsync(
-      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
+    const { stdout } = await execFileAsync(
+      "pgrep",
+      ["-lf", "/Applications/Obsidian.app/Contents/MacOS/Obsidian$"],
       { timeout: 2000 }
     );
     const match = stdout.match(/(\S*\/Contents\/MacOS\/obsidian)/i);
@@ -81,16 +82,24 @@ const CLI = await resolveCliPath(config.cliPath);
 const VAULT = config.vault;
 const TIMEOUT_MS = config.timeoutMs;
 
+const OBSIDIAN_PROCESS_PATTERN = "/Applications/Obsidian.app/Contents/MacOS/Obsidian$";
+const RUNNING_CACHE_TTL_MS = 5000;
+let runningCache = { value: null, at: 0 };
+
 async function checkObsidianRunning() {
-  try {
-    const { stdout } = await execAsync(
-      "ps aux | grep -i obsidian | grep -v grep | grep -v Helper",
-      { timeout: 2000 }
-    );
-    return stdout.includes("/Applications/Obsidian.app");
-  } catch {
-    return false;
+  const now = Date.now();
+  if (runningCache.value !== null && now - runningCache.at < RUNNING_CACHE_TTL_MS) {
+    return runningCache.value;
   }
+  let running = false;
+  try {
+    await execFileAsync("pgrep", ["-f", OBSIDIAN_PROCESS_PATTERN], { timeout: 2000 });
+    running = true;
+  } catch {
+    running = false;
+  }
+  runningCache = { value: running, at: now };
+  return running;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +150,12 @@ async function run(input) {
 
 /** Run CLI, return MCP result. Accepts a command string or an args array. */
 async function runTool(input) {
+  if (!(await checkObsidianRunning())) {
+    return errorResult(
+      "Obsidian.app is not running. Open Obsidian and retry — no Claude Desktop restart needed.",
+      "OBSIDIAN_NOT_RUNNING"
+    );
+  }
   const { stdout, stderr, error } = await run(input);
   if (error) {
     return errorResult(error.message, error.type);
@@ -157,7 +172,7 @@ async function runTool(input) {
 
 const server = new McpServer({
   name: "obsidian-mcp",
-  version: "1.2.0",
+  version: "1.2.1",
   capabilities: { tools: {} },
 });
 
@@ -410,8 +425,9 @@ for (const [name, content] of Object.entries(promptContent)) {
 async function main() {
   const running = await checkObsidianRunning();
   if (!running) {
-    console.error("Error: Obsidian is not running. Please open Obsidian and try again.");
-    process.exit(1);
+    console.error(
+      "Warning: Obsidian.app not detected. Server will accept connections; tool calls will fail until Obsidian is opened."
+    );
   }
   const transport = new StdioServerTransport();
   console.error("obsidian-mcp server running on stdio");

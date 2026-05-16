@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.1] - 2026-05-16
+
+### Fixed
+- Server no longer exits on startup when Obsidian.app isn't running. Connects and accepts tool calls; first tool call returns `OBSIDIAN_NOT_RUNNING` error with remediation message. User can open Obsidian and retry without restarting Claude Desktop (#21).
+- Process detection uses anchored `pgrep -f` instead of `ps aux | grep -v Helper`, eliminating false positives from helper binaries (#21).
+
+### Added
+- 5s cache on `checkObsidianRunning` to avoid repeated `pgrep` on rapid back-to-back tool calls.
+
 ## [1.2.0] - 2026-04-11
 
 ### Fixed
