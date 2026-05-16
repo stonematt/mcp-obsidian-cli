@@ -69,4 +69,4 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 - Brownfield: existing code needs hardening, not greenfield
 
 ---
-*Last updated: 2026-05-16 — PRs #25 (issue templates) and #26 (MCP registry publish) merged to dev*
+*Last updated: 2026-05-16 — PR #28 (release: v1.3.2 registry catch-up) merged to master; v1.3.2 published to npm + MCP Registry; GitHub Release created*
