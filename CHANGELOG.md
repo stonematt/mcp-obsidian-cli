@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.2] - 2026-05-16
+
+### Fixed
+- MCP Registry catalog entry now publishes correctly. The v1.3.1 catalog update was rejected because the description exceeded the registry's 100-char limit; the npm package shipped fine but the registry listing didn't refresh.
+
 ## [1.3.1] - 2026-05-16
 
 ### Added
