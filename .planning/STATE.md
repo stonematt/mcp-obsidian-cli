@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Phase
 
-**Phase 3:** Polish (v1.x) — Ready to plan
+**Phase 3:** Polish (v1.x) — v1.3.0 shipped (graceful startup, vault routing, runtime vault selection)
 
 ## Phase Status
 
@@ -69,4 +69,4 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 - Brownfield: existing code needs hardening, not greenfield
 
 ---
-*Last updated: 2026-04-04 after Phase 2.1 complete, transitioning to Phase 3*
+*Last updated: 2026-05-16 — PRs #25 (issue templates) and #26 (MCP registry publish) merged to dev*

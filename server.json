@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.stonematt/mcp-obsidian-cli",
+  "description": "MCP server wrapping the Obsidian CLI — full native API access (search, wikilink resolution, tasks, properties, daily notes, backlinks, 80+ commands) over the Model Context Protocol.",
+  "repository": {
+    "url": "https://github.com/stonematt/mcp-obsidian-cli",
+    "source": "github"
+  },
+  "version": "1.3.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "mcp-obsidian-cli",
+      "version": "1.3.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "OBSIDIAN_VAULT",
+          "description": "Target vault name. If unset or unknown, the server prompts the caller on first tool use, listing the vaults Obsidian knows about.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "OBSIDIAN_CLI_PATH",
+          "description": "Path to the obsidian-cli binary. Auto-discovered on macOS; set explicitly on Linux/Windows or if the binary is non-standard.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "obsidian-cli"
+        },
+        {
+          "name": "OBSIDIAN_TIMEOUT_MS",
+          "description": "Per-command timeout in milliseconds.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "15000"
+        }
+      ]
+    }
+  ]
+}
