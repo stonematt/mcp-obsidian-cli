@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.3] - 2026-05-16
+
+### Changed
+- Sharper package description leading with the architectural differentiator (no REST, no API keys, 80+ commands) — visible on npm and the MCP Registry.
+
+### Added
+- README badges (npm version, downloads, MCP Registry, Node, license).
+- `homepage` and `bugs` URLs in `package.json`.
+- Discoverability keywords for npm and aggregator scrapers.
+
 ## [1.3.2] - 2026-05-16
 
 ### Fixed
