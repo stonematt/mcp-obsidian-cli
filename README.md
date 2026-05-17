@@ -1,6 +1,10 @@
 # mcp-obsidian-cli
 
-> **Trademark Notice:** "Obsidian" is a trademark of Obsidian Publishing, Inc. This project is not affiliated with or endorsed by Obsidian Publishing.
+[![npm version](https://img.shields.io/npm/v/mcp-obsidian-cli.svg)](https://www.npmjs.com/package/mcp-obsidian-cli)
+[![npm downloads](https://img.shields.io/npm/dm/mcp-obsidian-cli.svg)](https://www.npmjs.com/package/mcp-obsidian-cli)
+[![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=stonematt%2Fmcp-obsidian-cli)
+[![Node](https://img.shields.io/node/v/mcp-obsidian-cli.svg)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 MCP server that wraps the Obsidian CLI, giving AI assistants full access to Obsidian's native API — search index, wikilink resolution, tasks, properties, daily notes, backlinks, and 80+ commands — through the Model Context Protocol.
 
@@ -113,3 +117,5 @@ MIT
 
 Maintained by [@stonematt](https://github.com/stonematt)
 Licensed under the MIT License
+
+**Trademark Notice:** "Obsidian" is a trademark of Obsidian Publishing, Inc. This project is not affiliated with or endorsed by Obsidian Publishing.
