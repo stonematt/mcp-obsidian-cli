@@ -44,7 +44,7 @@ Key dependencies: `@modelcontextprotocol/sdk` (MCP protocol), `zod` (tool input 
 | Variable | Default | Purpose |
 |---|---|---|
 | `OBSIDIAN_VAULT` | _(none)_ | Target vault name |
-| `OBSIDIAN_CLI_PATH` | `obsidian` | Path to CLI binary |
+| `OBSIDIAN_CLI_PATH` | `obsidian-cli` | Path to CLI binary |
 | `OBSIDIAN_TIMEOUT_MS` | `15000` | Command timeout |
 | `XDG_CONFIG_HOME` | `~/.config` | Config file base path |
 
