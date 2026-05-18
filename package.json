@@ -6,15 +6,16 @@
   "description": "Obsidian MCP server via the official CLI plugin — no REST, no API keys, 80+ native commands.",
   "main": "server.js",
   "bin": {
-    "mcp-obsidian-cli": "server.js"
+    "mcp-obsidian-cli": "bin/server.js"
   },
   "files": [
     "server.js",
+    "bin/",
     "lib/",
     "prompts/"
   ],
   "scripts": {
-    "start": "node server.js",
+    "start": "node bin/server.js",
     "test": "node --test test/*.test.js"
   },
   "engines": {
