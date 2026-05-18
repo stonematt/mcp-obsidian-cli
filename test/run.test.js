@@ -16,7 +16,7 @@ function isObsidianRunning() {
 const obsidianRunning = isObsidianRunning();
 
 async function runServerOnce() {
-  const serverPath = new URL("../server.js", import.meta.url).pathname;
+  const serverPath = new URL("../bin/server.js", import.meta.url).pathname;
   const proc = spawn("node", [serverPath], {
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 10000,
