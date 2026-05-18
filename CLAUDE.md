@@ -17,25 +17,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Run the server
-node server.js
+node bin/server.js   # or: npm start
 
 # Run tests (Node.js built-in test runner)
-node --test test/run.test.js
+npm test             # runs everything under test/*.test.js
 
 # Run via npx (as end users would)
 npx mcp-obsidian-cli
 ```
 
-Tests use `node:test` — no test framework dependency. The health check test behavior depends on `OBSIDIAN_RUNNING=1` env var: without it, tests verify the server exits cleanly when Obsidian isn't running; with it, tests verify successful startup.
+Tests use `node:test` — no test framework dependency. `test/run.test.js` spawns `bin/server.js` as a child process to assert exit code and the running banner; `test/server.test.js` exercises `createServer` end-to-end via the SDK's `InMemoryTransport` with a fake `ObsidianCli`. The current contract is **warn-and-continue** when Obsidian is not detected — the server stays up; tool calls return `OBSIDIAN_NOT_RUNNING` until the app is opened.
 
 ## Architecture
 
-**Single-file server** (`server.js`, ~400 lines) — the entire MCP server lives in one file:
+Three pieces, no top-level side effects in `server.js`:
 
-- **Config loading** (`loadConfig`) — YAML config file at `$XDG_CONFIG_HOME/mcp-obsidian-cli/config.yaml` with env var overrides. Precedence: env vars > config file > defaults.
-- **CLI execution** (`run`, `parseArgs`, `runTool`) — shells out to the `obsidian` binary via `execFile`. `parseArgs` handles quoted values. `runTool` wraps results into MCP response format.
-- **Health check** (`checkObsidianRunning`) — verifies Obsidian is actually running (not just installed) by checking processes and CLI version output. Filters out startup/update messages that indicate CLI launched Obsidian rather than connecting to it.
-- **Tool registration** — one generic pass-through tool (`obsidian`) that accepts any CLI command string, plus ~12 typed convenience tools for common operations (daily notes, search, tasks, properties, etc.). Each convenience tool builds a CLI command string and delegates to `runTool`.
+- **`bin/server.js`** (entrypoint) — the only file that performs I/O at module load. Reads config, prompts, and `package.json#version`; probes the CLI path via `resolveCliPath`; builds the `ObsidianCli` adapter; calls `createServer(...)`; connects `StdioServerTransport`. Fatal errors here are the only path that calls `process.exit`.
+- **`server.js`** (`createServer` factory) — pure factory that returns a wired `McpServer`. Registers the generic `obsidian` pass-through tool, ~13 typed convenience tools, and four MCP prompts. Takes `cli`, `prompts`, `manifest` (reserved for #10), `version`, `knownVaults`, and `runtimeVault` as injected deps. Importing this file is silent.
+- **`lib/obsidian-cli.js`** — adapter around the `obsidian-cli` subprocess. `createObsidianCli({cliPath, vault, timeoutMs, execFile})` returns `{ exec, getVault, setVault }`; result shape is `{stdout, stderr, error|null}` with `error.type ∈ {CLI_NOT_FOUND, TIMEOUT, EXECUTION_ERROR}`. Also exports `resolveCliPath` (PATH / known paths / pgrep fallback) and `createObsidianRunningChecker` (TTL-cached pgrep probe). All probes are dependency-injectable for tests.
+
+`lib/helpers.js` continues to host pure helpers: `loadConfig`, `loadVersion`, `parseArgs`, `buildCliArgs`, `loadKnownVaults`, `extractLeadingVault`, `text`, `errorResult`, `cliNotFoundMessage`.
 
 Key dependencies: `@modelcontextprotocol/sdk` (MCP protocol), `zod` (tool input schemas), `js-yaml` (config parsing).
 
