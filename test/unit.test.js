@@ -10,6 +10,7 @@ import {
   errorResult,
   buildCliArgs,
   cliNotFoundMessage,
+  loadVersion,
 } from "../lib/helpers.js";
 
 // ---------------------------------------------------------------------------
@@ -214,5 +215,23 @@ describe("cliNotFoundMessage", () => {
   it("does not reference the deprecated 'obsidian' binary", () => {
     const msg = cliNotFoundMessage("obsidian-cli");
     assert.doesNotMatch(msg, /ensure 'obsidian' is on PATH/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// loadVersion
+// ---------------------------------------------------------------------------
+
+describe("loadVersion", () => {
+  it("reads the version field from a package.json", () => {
+    const tmp = join(tmpdir(), `mcp-version-test-${Date.now()}`);
+    mkdirSync(tmp, { recursive: true });
+    const pkg = join(tmp, "package.json");
+    writeFileSync(pkg, JSON.stringify({ name: "x", version: "9.8.7" }));
+    try {
+      assert.equal(loadVersion(pkg), "9.8.7");
+    } finally {
+      rmSync(tmp, { recursive: true });
+    }
   });
 });
