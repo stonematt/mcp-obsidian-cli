@@ -30,7 +30,11 @@ import {
  *   `isObsidianRunning` callable.
  * @param {Record<string,string>} opts.prompts - Prompt content keyed by slug
  *   (`obsidian-cli`, `obsidian-markdown`, `obsidian-bases`, `obsidian-canvas`).
- * @param {object|null} [opts.manifest] - Reserved for #10 VerbManifest. Ignored today.
+ * @param {object|null} [opts.manifest] - Optional VerbManifest (see
+ *   `lib/manifest.js`). When supplied, the generic `obsidian` pass-through
+ *   tool gates calls through `manifest.validate(args)` and fires
+ *   `manifest.refresh()` after successful reload-class verbs. Typed
+ *   convenience tools bypass the manifest entirely (Zod handles their args).
  * @param {string} opts.version - Server version string surfaced via MCP.
  * @param {Set<string>} [opts.knownVaults] - Vault names Obsidian knows about.
  * @param {string|null} [opts.runtimeVault] - Initial runtime vault (or null
@@ -40,11 +44,16 @@ import {
 export function createServer({
   cli,
   prompts,
-  manifest = null, // reserved for #10 VerbManifest
+  manifest = null,
   version,
   knownVaults = new Set(),
   runtimeVault = null,
 } = {}) {
+  // Verbs whose successful execution invalidates the cached help output
+  // (the CLI restarts or a plugin reloads, so verb/flag shapes may shift).
+  // First positional token only — leading `vault=NAME` is stripped first.
+  const RELOAD_VERBS = new Set(["restart", "reload", "plugin:reload"]);
+
   // Seed the adapter's vault state from the runtime vault. The adapter is
   // the single source of truth for "what vault are we currently routed to";
   // the factory just hands it the initial value.
@@ -108,28 +117,66 @@ export function createServer({
   server.tool(
     "obsidian",
     `Run any Obsidian CLI command. Pass the full command string exactly as you
-would on the terminal (minus the leading 'obsidian' binary name).
+would on the terminal (minus the leading 'obsidian' binary name). Leading
+\`vault=NAME\` overrides the active vault and is cached for subsequent calls.
 
-IMPORTANT: when multiple vaults are loaded, the CLI's vault= argument must
-be the FIRST token. The server auto-prepends vault=<runtimeVault> once a
-vault has been selected; if you include vault= manually in this command
-string, put it first or the CLI silently routes to the focused vault.
+Intent -> verb cheatsheet. Use the canonical verb on the right; the convenience
+tools (\`obsidian_*\`) wrap the same verbs with typed args.
 
-VAULT ROUTING: if the user names a vault in conversation (e.g. "save this
-in tyee", "scarp note"), prepend \`vault=NAME \` as the first token. The
-server caches that selection in memory for subsequent calls.
+PUT
+  put new note from template     -> templater:create-from-template template=… file=…
+  create plain note              -> create path=… content=…
+  append to today's daily        -> daily:append content=…
+GET
+  read note                      -> read path=…   (or file=…)
+  search content                 -> search:context query=… [path=… limit=…]
+  list properties / read one     -> properties [file=…]  |  property:read name=… file=…
+  list backlinks                 -> backlinks file=…
+MOVE/RENAME
+  move or rename note            -> move from=… to=…
+DELETE
+  delete note                    -> delete path=…
+DISCOVER
+  list files                     -> files [folder=… ext=…]
+  list tags with counts          -> tags counts [sort=name|count]
+  list tasks                     -> tasks [daily todo done path=…]
+  recently opened                -> recents
+  CLI reference                  -> help [verb]
 
-Examples:
-  "daily:read"
-  "search:context query=\"meeting notes\" limit=5"
-  "read file=\"My Note\""
-  "tags counts sort=count"
-  "tasks daily"
-  "property:read name=status path=\"1p/my-project/my-project.md\""
-  "vault=tyee read file=\"My Note\""   # explicit vault override, first
-  "help search"`,
+If you don't see the intent here, the CLI's \`help\` verb is the source of truth.`,
     { command: z.string().describe("CLI command and arguments") },
-    async ({ command }) => runTool(command),
+    async ({ command }) => {
+      const parsed = parseArgs(command);
+
+      // Pre-call manifest validation (pass-through only — typed tools rely on
+      // Zod schemas). On `{ok:false, hint}` we short-circuit with the hint;
+      // on `{ok:false}` with no hint or `{ok:true}` we fall through to exec.
+      if (manifest && typeof manifest.validate === "function") {
+        try {
+          const v = await manifest.validate(parsed);
+          if (v && v.ok === false && v.hint) {
+            return { isError: true, content: [{ type: "text", text: v.hint }] };
+          }
+        } catch {
+          // Manifest failures must not break the pass-through. Fall through
+          // to exec and let the CLI surface any real error.
+        }
+      }
+
+      const result = await runTool(command);
+
+      // Reload detection — only on success, and only when the first non-vault
+      // token names a verb that mutates the CLI's verb/flag surface. Exactly
+      // one refresh per matching call.
+      if (!result?.isError && manifest && typeof manifest.refresh === "function") {
+        const first = parsed[0]?.startsWith("vault=") ? parsed[1] : parsed[0];
+        if (first && RELOAD_VERBS.has(first)) {
+          try { await manifest.refresh(); } catch { /* swallow — best-effort */ }
+        }
+      }
+
+      return result;
+    },
   );
 
   // ---- Convenience tools for common operations ----------------------------

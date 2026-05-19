@@ -27,6 +27,7 @@ function fakeCli({
   result = { stdout: "ok", stderr: "", error: null },
   isRunning = true,
   vault = "v1",
+  throwOnExec = null,
 } = {}) {
   const calls = [];
   let currentVault = vault;
@@ -34,6 +35,7 @@ function fakeCli({
     calls,
     exec: async (input) => {
       calls.push(input);
+      if (throwOnExec) throw throwOnExec;
       return result;
     },
     getVault: () => currentVault,
@@ -43,8 +45,13 @@ function fakeCli({
 }
 
 /**
- * Build a fake VerbManifest. Tests can override per-method behavior to
- * exercise the obsidian_help handler without standing up the real parser.
+ * Build a fake VerbManifest. Tests can override per-method behavior via
+ * `all` / `forVerb` / `validate` / `refresh`. The default `validate` and
+ * `refresh` track calls so spy-style assertions work without overrides:
+ *   - `validateCalls` exposes the args of each `validate` invocation
+ *   - `refreshCount` exposes how many times `refresh` was called
+ * Shorthand knobs for the common cases: `validateResult` (static result)
+ * and `validateFn` (per-call computed result).
  */
 function fakeManifest({
   all = async () => ({
@@ -60,10 +67,25 @@ function fakeManifest({
     Eval: [],
   }),
   forVerb = async () => null,
-  validate = async () => ({ ok: true }),
-  refresh = async () => {},
+  validate = null,
+  refresh = null,
+  validateResult = { ok: true },
+  validateFn = null,
 } = {}) {
-  return { all, forVerb, validate, refresh };
+  const validateCalls = [];
+  let refreshCount = 0;
+  return {
+    validateCalls,
+    get refreshCount() { return refreshCount; },
+    all,
+    forVerb,
+    validate: validate || (async (args) => {
+      validateCalls.push(args);
+      if (validateFn) return validateFn(args);
+      return validateResult;
+    }),
+    refresh: refresh || (async () => { refreshCount++; }),
+  };
 }
 
 async function withClient(
@@ -527,6 +549,176 @@ describe("createServer", () => {
       });
       assert.equal(res.isError, true);
       assert.equal(res.content[0].text, "kaboom");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-through middleware — cheatsheet + manifest validation + reload detect
+  // (issue #12)
+  // ---------------------------------------------------------------------------
+
+  it("obsidian tool description includes an intent->verb cheatsheet", async () => {
+    const cli = fakeCli();
+    await withClient({ cli, manifest: fakeManifest() }, async (client) => {
+      const { tools } = await client.listTools();
+      const obs = tools.find((t) => t.name === "obsidian");
+      assert.ok(obs, "obsidian tool is registered");
+      // Cheatsheet must label all five categories and at least a few canonical
+      // routing rows so an LLM can pick a verb without round-tripping help.
+      assert.match(obs.description, /PUT/);
+      assert.match(obs.description, /GET/);
+      assert.match(obs.description, /MOVE\/RENAME|MOVE/);
+      assert.match(obs.description, /DELETE/);
+      assert.match(obs.description, /DISCOVER/);
+      assert.match(obs.description, /read\s+path=/);
+      assert.match(obs.description, /move\s+from=/);
+      assert.match(obs.description, /templater:create-from-template/);
+    });
+  });
+
+  it("obsidian tool description body stays under 40 lines", async () => {
+    const cli = fakeCli();
+    await withClient({ cli, manifest: fakeManifest() }, async (client) => {
+      const { tools } = await client.listTools();
+      const obs = tools.find((t) => t.name === "obsidian");
+      const lineCount = obs.description.split("\n").length;
+      assert.ok(
+        lineCount < 40,
+        `obsidian description body should stay under 40 lines, got ${lineCount}`,
+      );
+    });
+  });
+
+  it("pass-through invokes manifest.validate before cli.exec", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      await client.callTool({
+        name: "obsidian",
+        arguments: { command: "read path=foo.md" },
+      });
+      assert.equal(manifest.validateCalls.length, 1);
+      assert.deepEqual(manifest.validateCalls[0], ["read", "path=foo.md"]);
+      assert.equal(cli.calls.length, 1, "cli.exec runs when validate is ok");
+    });
+  });
+
+  it("pass-through returns isError with hint when manifest.validate fails", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest({
+      validateResult: {
+        ok: false,
+        hint: "Obsidian CLI uses 'to=' for move/rename destinations, not 'dest='. Try 'to=' instead of 'dest='.",
+      },
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian",
+        arguments: { command: "move dest=foo" },
+      });
+      assert.equal(res.isError, true);
+      assert.match(res.content[0].text, /to=/);
+      assert.equal(cli.calls.length, 0, "cli.exec must not run when validate rejects");
+    });
+  });
+
+  it("pass-through skips validation gracefully when manifest is null", async () => {
+    const cli = fakeCli();
+    await withClient({ cli, manifest: null }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian",
+        arguments: { command: "read path=foo.md" },
+      });
+      assert.equal(res.isError, undefined);
+      assert.equal(cli.calls.length, 1);
+    });
+  });
+
+  it("pass-through forwards known-good calls (no false rejection)", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest({ validateResult: { ok: true } });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian",
+        arguments: { command: "read path=foo.md" },
+      });
+      assert.equal(res.isError, undefined);
+      assert.deepEqual(cli.calls[0], "read path=foo.md");
+    });
+  });
+
+  it("pass-through fires manifest.refresh exactly once after a successful 'restart'", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      await client.callTool({
+        name: "obsidian",
+        arguments: { command: "restart" },
+      });
+      assert.equal(manifest.refreshCount, 1);
+    });
+  });
+
+  it("pass-through fires manifest.refresh after a successful 'reload'", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      await client.callTool({
+        name: "obsidian",
+        arguments: { command: "reload" },
+      });
+      assert.equal(manifest.refreshCount, 1);
+    });
+  });
+
+  it("pass-through fires manifest.refresh after a successful 'plugin:reload'", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      await client.callTool({
+        name: "obsidian",
+        arguments: { command: "plugin:reload name=foo" },
+      });
+      assert.equal(manifest.refreshCount, 1);
+    });
+  });
+
+  it("pass-through does NOT fire manifest.refresh for unrelated verbs", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      await client.callTool({
+        name: "obsidian",
+        arguments: { command: "read path=foo.md" },
+      });
+      assert.equal(manifest.refreshCount, 0);
+    });
+  });
+
+  it("pass-through does NOT fire manifest.refresh when 'reload' errors out", async () => {
+    const cli = fakeCli({
+      result: { stdout: "", stderr: "", error: { type: "EXECUTION_ERROR", message: "boom" } },
+    });
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian",
+        arguments: { command: "reload" },
+      });
+      assert.equal(res.isError, true);
+      assert.equal(manifest.refreshCount, 0);
+    });
+  });
+
+  it("pass-through reload detection tolerates a leading vault= token", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      await client.callTool({
+        name: "obsidian",
+        arguments: { command: "vault=v1 reload" },
+      });
+      assert.equal(manifest.refreshCount, 1);
     });
   });
 
