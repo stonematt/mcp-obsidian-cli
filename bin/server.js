@@ -34,6 +34,7 @@ import {
   createObsidianRunningChecker,
   resolveCliPath,
 } from "../lib/obsidian-cli.js";
+import { createVerbManifest } from "../lib/manifest.js";
 import { createServer } from "../server.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -93,10 +94,12 @@ async function main() {
   });
   cli.isObsidianRunning = isObsidianRunning;
 
+  const manifest = createVerbManifest({ cli });
+
   const server = createServer({
     cli,
     prompts,
-    manifest: null,
+    manifest,
     version,
     knownVaults,
     runtimeVault,

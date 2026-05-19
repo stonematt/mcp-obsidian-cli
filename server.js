@@ -45,9 +45,6 @@ export function createServer({
   knownVaults = new Set(),
   runtimeVault = null,
 } = {}) {
-  // Keep `manifest` referenced so future refactors don't trip a linter.
-  void manifest;
-
   // Seed the adapter's vault state from the runtime vault. The adapter is
   // the single source of truth for "what vault are we currently routed to";
   // the factory just hands it the initial value.
@@ -337,11 +334,36 @@ Examples:
 
   server.tool(
     "obsidian_help",
-    "Get Obsidian reference documentation on a topic.\n\nParameters:\n  topic (required) — one of: cli, markdown, bases, canvas\n\nExamples:\n  obsidian_help({ topic: \"markdown\" }) — wikilinks, embeds, callouts, properties, tags\n  obsidian_help({ topic: \"bases\" }) — Bases YAML schema, filters, formulas, views\n  obsidian_help({ topic: \"canvas\" }) — JSON Canvas nodes, edges, colors, layout\n  obsidian_help({ topic: \"cli\" }) — CLI command syntax and parameter patterns",
-    { topic: z.enum(["cli", "markdown", "bases", "canvas"]).describe("Reference topic") },
-    async ({ topic }) => ({
-      content: [{ type: "text", text: prompts[`obsidian-${topic}`] }],
-    }),
+    "Get Obsidian help: a live verb index from the CLI, or reference docs by slug.\n\nParameters:\n  topic (optional) — a verb name (e.g. \"read\", \"daily:append\", \"property:set\") OR a reference-doc slug (cli, markdown, bases, canvas)\n\nBehavior:\n  - No topic — returns the live, category-grouped verb index parsed from the CLI's `help` output (Read, Write, Edit, Discover, Tasks, Daily, Properties, Plugins, Dev, Eval).\n  - Verb name — returns that verb's description and flag list from the live manifest.\n  - Doc slug — returns the Kepano-derived reference prompt (markdown / bases / canvas / cli syntax).\n  - Collision rule: if a doc slug also names a real verb, the verb's live help wins (live truth beats static text).\n\nExamples:\n  obsidian_help({}) — browse the verb catalog\n  obsidian_help({ topic: \"read\" }) — live verb help for `read`\n  obsidian_help({ topic: \"markdown\" }) — Obsidian-flavored markdown reference\n  obsidian_help({ topic: \"bases\" }) — Bases YAML schema, filters, formulas\n  obsidian_help({ topic: \"canvas\" }) — JSON Canvas reference\n  obsidian_help({ topic: \"cli\" }) — CLI command syntax reference",
+    { topic: z.string().optional().describe("Verb name or reference-doc slug (cli, markdown, bases, canvas)") },
+    async ({ topic }) => {
+      // No topic: render the manifest index. If no manifest is wired, fall
+      // back to listing the available reference-doc slugs.
+      if (!topic) {
+        if (manifest) {
+          const index = await manifest.all();
+          return text(renderVerbIndex(index));
+        }
+        return text(renderDocSlugList(prompts));
+      }
+
+      // Topic given: verb wins over doc slug. Probe the manifest first.
+      if (manifest) {
+        const verb = await manifest.forVerb(topic);
+        if (verb) return text(renderVerbHelp(verb));
+      }
+
+      // No verb match — fall back to the static reference prompt if the
+      // topic names a doc slug.
+      const promptKey = `obsidian-${topic}`;
+      if (prompts && Object.prototype.hasOwnProperty.call(prompts, promptKey)) {
+        return text(prompts[promptKey]);
+      }
+
+      return text(
+        `No help found for '${topic}'. Try obsidian_help() with no arguments to browse the verb index, or pass a doc slug: cli, markdown, bases, canvas.`,
+      );
+    },
   );
 
   // ---- MCP Prompts -----------------------------------------------------------
@@ -378,4 +400,83 @@ Examples:
   }
 
   return server;
+}
+
+// ---------------------------------------------------------------------------
+// obsidian_help renderers
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a category-grouped verb index (the output of `manifest.all()`) into
+ * the plain text block returned by `obsidian_help()` with no args. Empty
+ * categories are skipped so the surface stays scannable.
+ *
+ * @param {Record<string, string[]>} index
+ * @returns {string}
+ */
+function renderVerbIndex(index) {
+  const lines = ["Obsidian CLI verbs (live from `obsidian help`):", ""];
+  let any = false;
+  for (const [category, verbs] of Object.entries(index)) {
+    if (!verbs || verbs.length === 0) continue;
+    any = true;
+    lines.push(`${category}:`);
+    for (const verb of verbs) {
+      lines.push(`  ${verb}`);
+    }
+    lines.push("");
+  }
+  if (!any) {
+    lines.push("(no verbs reported by the CLI)");
+  }
+  lines.push("Reference docs: pass topic=cli|markdown|bases|canvas for Kepano-derived guides.");
+  lines.push("Verb detail:    pass topic=<verb> (e.g. \"read\", \"daily:append\") for flag-level help.");
+  return lines.join("\n");
+}
+
+/**
+ * Render the help block for a single verb (the output of `manifest.forVerb`).
+ * Mirrors the CLI's own help formatting closely enough that callers can copy
+ * the example tokens verbatim.
+ *
+ * @param {{name: string, description: string, flags: Array<{name: string, valueShape: string|null, description: string}>}} verb
+ * @returns {string}
+ */
+function renderVerbHelp(verb) {
+  const lines = [`${verb.name} — ${verb.description}`.trimEnd()];
+  if (!verb.flags || verb.flags.length === 0) {
+    lines.push("");
+    lines.push("(no flags)");
+    return lines.join("\n");
+  }
+  lines.push("");
+  lines.push("Flags:");
+  for (const flag of verb.flags) {
+    const left = flag.valueShape ? `${flag.name}=${flag.valueShape}` : flag.name;
+    const desc = flag.description ? `  - ${flag.description}` : "";
+    lines.push(`  ${left}${desc}`);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Render the bare list of available reference-doc slugs. Used as a fallback
+ * for `obsidian_help()` when no manifest is wired (no live verb index to
+ * show, so we at least advertise the static docs).
+ *
+ * @param {Record<string,string>} prompts
+ * @returns {string}
+ */
+function renderDocSlugList(prompts) {
+  const slugs = Object.keys(prompts || {})
+    .filter((k) => k.startsWith("obsidian-"))
+    .map((k) => k.slice("obsidian-".length))
+    .sort();
+  if (slugs.length === 0) {
+    return "No reference docs are loaded.";
+  }
+  return [
+    "Available reference docs (pass as topic=):",
+    ...slugs.map((s) => `  ${s}`),
+  ].join("\n");
 }

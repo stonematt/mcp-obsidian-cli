@@ -42,11 +42,38 @@ function fakeCli({
   };
 }
 
-async function withClient({ cli, knownVaults = new Set(["v1"]), runtimeVault = "v1" }, run) {
+/**
+ * Build a fake VerbManifest. Tests can override per-method behavior to
+ * exercise the obsidian_help handler without standing up the real parser.
+ */
+function fakeManifest({
+  all = async () => ({
+    Read: ["read"],
+    Write: ["create"],
+    Edit: [],
+    Discover: [],
+    Tasks: [],
+    Daily: [],
+    Properties: [],
+    Plugins: [],
+    Dev: [],
+    Eval: [],
+  }),
+  forVerb = async () => null,
+  validate = async () => ({ ok: true }),
+  refresh = async () => {},
+} = {}) {
+  return { all, forVerb, validate, refresh };
+}
+
+async function withClient(
+  { cli, manifest = null, knownVaults = new Set(["v1"]), runtimeVault = "v1" },
+  run,
+) {
   const server = createServer({
     cli,
     prompts: PROMPTS,
-    manifest: null,
+    manifest,
     version: "9.9.9",
     knownVaults,
     runtimeVault,
@@ -238,15 +265,184 @@ describe("createServer", () => {
     });
   });
 
-  it("obsidian_help with topic returns prompt content from injected prompts map", async () => {
+  // ---------------------------------------------------------------------------
+  // obsidian_help — manifest-backed surface (issue #11)
+  // ---------------------------------------------------------------------------
+
+  it("obsidian_help with doc-slug topic returns prompt content from injected prompts map", async () => {
     const cli = fakeCli();
-    await withClient({ cli }, async (client) => {
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
       const res = await client.callTool({
         name: "obsidian_help",
         arguments: { topic: "markdown" },
       });
       assert.equal(res.content[0].text, "Markdown doc body");
       assert.equal(cli.calls.length, 0);
+    });
+  });
+
+  it("obsidian_help returns each of the four reference prompts (cli/markdown/bases/canvas)", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      for (const [topic, expected] of [
+        ["cli", "CLI doc body"],
+        ["markdown", "Markdown doc body"],
+        ["bases", "Bases doc body"],
+        ["canvas", "Canvas doc body"],
+      ]) {
+        const res = await client.callTool({
+          name: "obsidian_help",
+          arguments: { topic },
+        });
+        assert.equal(res.content[0].text, expected, `topic=${topic}`);
+      }
+    });
+  });
+
+  it("obsidian_help schema makes topic optional (no enum constraint)", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest();
+    await withClient({ cli, manifest }, async (client) => {
+      const { tools } = await client.listTools();
+      const helpTool = tools.find((t) => t.name === "obsidian_help");
+      assert.ok(helpTool, "obsidian_help tool is registered");
+      const props = helpTool.inputSchema?.properties || {};
+      assert.ok("topic" in props, "topic property is advertised");
+      const required = helpTool.inputSchema?.required || [];
+      assert.ok(
+        !required.includes("topic"),
+        "topic must be optional so no-arg calls return the manifest index",
+      );
+      assert.ok(
+        !("enum" in props.topic),
+        "topic must not be a closed enum — verb names are an open set",
+      );
+    });
+  });
+
+  it("obsidian_help() with no topic returns the manifest's category-grouped index", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest({
+      all: async () => ({
+        Read: ["read", "outline"],
+        Write: ["create", "append"],
+        Edit: ["move"],
+        Discover: ["search", "files"],
+        Tasks: ["tasks"],
+        Daily: ["daily:read"],
+        Properties: ["properties"],
+        Plugins: ["plugins"],
+        Dev: ["dev:console"],
+        Eval: ["eval"],
+      }),
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_help",
+        arguments: {},
+      });
+      const text = res.content[0].text;
+      // Categories with verbs in them must appear in the rendered index.
+      assert.match(text, /Read/);
+      assert.match(text, /\bread\b/);
+      assert.match(text, /outline/);
+      assert.match(text, /Write/);
+      assert.match(text, /create/);
+      assert.match(text, /Edit/);
+      assert.match(text, /move/);
+      assert.match(text, /Tasks/);
+      assert.match(text, /tasks/);
+      assert.match(text, /Daily/);
+      assert.match(text, /daily:read/);
+      assert.match(text, /Properties/);
+      assert.match(text, /properties/);
+      assert.match(text, /Plugins/);
+      assert.match(text, /plugins/);
+      assert.match(text, /Dev/);
+      assert.match(text, /dev:console/);
+      assert.match(text, /Eval/);
+      assert.match(text, /\beval\b/);
+      assert.equal(cli.calls.length, 0, "manifest.all should serve from cache");
+    });
+  });
+
+  it("obsidian_help with a verb-name topic returns the manifest's verb help block", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest({
+      forVerb: async (name) => {
+        if (name !== "read") return null;
+        return {
+          name: "read",
+          description: "Read file contents",
+          flags: [
+            { name: "file", valueShape: "<name>", description: "File name" },
+            { name: "path", valueShape: "<path>", description: "File path" },
+          ],
+        };
+      },
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_help",
+        arguments: { topic: "read" },
+      });
+      const text = res.content[0].text;
+      assert.match(text, /\bread\b/);
+      assert.match(text, /Read file contents/);
+      assert.match(text, /file=/);
+      assert.match(text, /File name/);
+      assert.match(text, /path=/);
+      assert.match(text, /File path/);
+    });
+  });
+
+  it("obsidian_help collision: verb wins over doc slug", async () => {
+    // Manifest contains a verb literally named "markdown". The live verb help
+    // must take precedence over the static markdown prompt content.
+    const cli = fakeCli();
+    const manifest = fakeManifest({
+      forVerb: async (name) => {
+        if (name !== "markdown") return null;
+        return {
+          name: "markdown",
+          description: "Live markdown verb from the CLI",
+          flags: [],
+        };
+      },
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_help",
+        arguments: { topic: "markdown" },
+      });
+      const text = res.content[0].text;
+      assert.match(
+        text,
+        /Live markdown verb from the CLI/,
+        "verb help should win over the static doc prompt",
+      );
+      assert.doesNotMatch(
+        text,
+        /Markdown doc body/,
+        "static prompt content must not leak when the verb resolves",
+      );
+    });
+  });
+
+  it("obsidian_help with unknown topic and no manifest match returns a not-found message", async () => {
+    const cli = fakeCli();
+    const manifest = fakeManifest({
+      forVerb: async () => null,
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_help",
+        arguments: { topic: "no-such-verb-or-doc" },
+      });
+      const text = res.content[0].text;
+      assert.match(text, /no-such-verb-or-doc/);
     });
   });
 
