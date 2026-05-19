@@ -94,6 +94,9 @@ async function main() {
   });
   cli.isObsidianRunning = isObsidianRunning;
 
+  // VerbManifest lazily fetches and caches `obsidian help`. The pass-through
+  // `obsidian` tool gates calls through it for drift detection (e.g.
+  // `dest=` -> `to=`) and refreshes it after restart/reload-class verbs.
   const manifest = createVerbManifest({ cli });
 
   const server = createServer({
