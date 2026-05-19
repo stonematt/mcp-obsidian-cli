@@ -50,7 +50,8 @@ The server exposes Obsidian CLI commands as MCP tools. A generic pass-through to
 
 | Tool | Description |
 |------|-------------|
-| `obsidian` | Generic pass-through — run any CLI command |
+| `obsidian` | Generic pass-through — run any CLI command (ships intent→verb cheatsheet, pre-call manifest validation, reload detection) |
+| `obsidian_help` | Manifest-backed help — list verbs by category, or look up a single verb / doc topic |
 | `obsidian_daily_read` | Read today's daily note |
 | `obsidian_daily_append` | Append to daily note |
 | `obsidian_read` | Read a note by name or path |
