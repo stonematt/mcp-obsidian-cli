@@ -58,7 +58,8 @@ The server exposes Obsidian CLI commands as MCP tools. A generic pass-through to
 | `obsidian_tags` | List tags with counts |
 | `obsidian_tasks` | Query tasks (daily, todo, done) |
 | `obsidian_properties` | Read frontmatter properties |
-| `obsidian_create` | Create a new note |
+| `obsidian_create` | Create a new plain note (no Templater expansion) |
+| `obsidian_create_from_template` | Create a note from a Templater template (expands `<% ... %>` placeholders) |
 | `obsidian_property_set` | Set a frontmatter property |
 | `obsidian_backlinks` | List backlinks to a note |
 | `obsidian_files` | List vault files |

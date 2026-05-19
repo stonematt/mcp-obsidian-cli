@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0] - 2026-05-18
+
+### Added
+- `obsidian_create_from_template` typed tool wrapping `templater:create-from-template`. Expands Templater placeholders (`<% tp.date.now() %>`, `<% tp.file.title %>`, etc.) in the resulting note. Takes `template` (vault-relative path) and `file` (output path).
+
+### Changed
+- `obsidian_create` no longer accepts `template=`. Previously, passing `template=` silently forwarded to the plain `create` verb, which copies raw bytes — Templater placeholders never expanded. If your prompts or scripts relied on the old (buggy) behavior, switch to `obsidian_create_from_template`. Tool descriptions now self-document the split.
+
 ## [1.3.3] - 2026-05-16
 
 ### Changed
