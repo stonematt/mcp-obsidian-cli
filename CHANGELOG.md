@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0] - 2026-05-19
+
+### Added
+- `obsidian_create_from_template` typed tool wrapping `templater:create-from-template`. Expands Templater placeholders (`<% tp.date.now() %>`, `<% tp.file.title %>`, etc.) in the resulting note. Takes `template` (vault-relative path) and `file` (output path).
+- `obsidian_help` is now manifest-backed. No-arg call returns a category-grouped index of every CLI verb (live from your running Obsidian). Pass a verb name (e.g. `read`, `create`, `move`) to get the live help block for that verb. Doc topics (`cli`, `markdown`, `bases`, `canvas`) still return the prompt content. Verb wins on collision.
+- Generic `obsidian` tool now ships an intent→verb cheatsheet in its description (PUT / GET / MOVE-RENAME / DELETE / DISCOVER), so the model picks the right verb on the first try instead of guessing.
+- Pre-call manifest validation on the generic `obsidian` tool. Calls with unknown verbs or known-bad arg names (e.g. `dest=` instead of `to=`) get an immediate hint with the suggested fix, before the CLI subprocess runs.
+- Reload detection middleware on the generic `obsidian` tool. Calls that hit `restart` / `reload` / `plugin:reload` auto-refresh the cached manifest, so newly-loaded plugins' verbs are immediately available without a server restart.
+
+### Changed
+- `obsidian_create` no longer accepts `template=`. Previously, passing `template=` silently forwarded to the plain `create` verb, which copies raw bytes — Templater placeholders never expanded. If your prompts or scripts relied on the old (buggy) behavior, switch to `obsidian_create_from_template`. Tool descriptions now self-document the split.
+
 ## [1.3.3] - 2026-05-16
 
 ### Changed

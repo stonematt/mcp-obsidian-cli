@@ -50,7 +50,8 @@ The server exposes Obsidian CLI commands as MCP tools. A generic pass-through to
 
 | Tool | Description |
 |------|-------------|
-| `obsidian` | Generic pass-through — run any CLI command |
+| `obsidian` | Generic pass-through — run any CLI command (ships intent→verb cheatsheet, pre-call manifest validation, reload detection) |
+| `obsidian_help` | Manifest-backed help — list verbs by category, or look up a single verb / doc topic |
 | `obsidian_daily_read` | Read today's daily note |
 | `obsidian_daily_append` | Append to daily note |
 | `obsidian_read` | Read a note by name or path |
@@ -58,7 +59,8 @@ The server exposes Obsidian CLI commands as MCP tools. A generic pass-through to
 | `obsidian_tags` | List tags with counts |
 | `obsidian_tasks` | Query tasks (daily, todo, done) |
 | `obsidian_properties` | Read frontmatter properties |
-| `obsidian_create` | Create a new note |
+| `obsidian_create` | Create a new plain note (no Templater expansion) |
+| `obsidian_create_from_template` | Create a note from a Templater template (expands `<% ... %>` placeholders) |
 | `obsidian_property_set` | Set a frontmatter property |
 | `obsidian_backlinks` | List backlinks to a note |
 | `obsidian_files` | List vault files |
