@@ -82,6 +82,7 @@ const EXPECTED_TOOL_NAMES = [
   "obsidian_tasks",
   "obsidian_properties",
   "obsidian_create",
+  "obsidian_create_from_template",
   "obsidian_property_set",
   "obsidian_backlinks",
   "obsidian_files",
@@ -148,6 +149,92 @@ describe("createServer", () => {
         arguments: { file: "Foo" },
       });
       assert.deepEqual(cli.calls[0], ["read", "file=Foo"]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // obsidian_create / obsidian_create_from_template (Templater split — issue #13)
+  // ---------------------------------------------------------------------------
+
+  it("obsidian_create schema does not advertise a template arg", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const { tools } = await client.listTools();
+      const createTool = tools.find((t) => t.name === "obsidian_create");
+      assert.ok(createTool, "obsidian_create tool is registered");
+      const props = createTool.inputSchema?.properties || {};
+      assert.ok(
+        !("template" in props),
+        "obsidian_create must not advertise a template arg — use obsidian_create_from_template",
+      );
+    });
+  });
+
+  it("obsidian_create description distinguishes plain-note creation from Templater", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const { tools } = await client.listTools();
+      const createTool = tools.find((t) => t.name === "obsidian_create");
+      assert.match(
+        createTool.description,
+        /templater|placeholder|obsidian_create_from_template/i,
+        "obsidian_create description should steer Templater users to the other tool",
+      );
+    });
+  });
+
+  it("obsidian_create with name+content builds the plain create command (no template)", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      await client.callTool({
+        name: "obsidian_create",
+        arguments: { name: "My Note", content: "# Hello" },
+      });
+      assert.deepEqual(cli.calls[0], ["create", "name=My Note", "content=# Hello"]);
+    });
+  });
+
+  it("obsidian_create_from_template forwards templater:create-from-template with template= and file=", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      await client.callTool({
+        name: "obsidian_create_from_template",
+        arguments: {
+          template: "Templates/daily.md",
+          file: "Daily/2026-05-18.md",
+        },
+      });
+      assert.deepEqual(cli.calls[0], [
+        "templater:create-from-template",
+        "template=Templates/daily.md",
+        "file=Daily/2026-05-18.md",
+      ]);
+    });
+  });
+
+  it("obsidian_create_from_template missing required args returns isError", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_create_from_template",
+        arguments: { template: "Templates/daily.md" }, // missing file
+      });
+      assert.equal(res.isError, true);
+      assert.equal(cli.calls.length, 0, "cli.exec must not be called when validation fails");
+    });
+  });
+
+  it("obsidian_create_from_template description names Templater placeholder expansion", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const { tools } = await client.listTools();
+      const templTool = tools.find((t) => t.name === "obsidian_create_from_template");
+      assert.ok(templTool, "obsidian_create_from_template tool is registered");
+      assert.match(
+        templTool.description,
+        /templater|placeholder|<%/i,
+        "obsidian_create_from_template description should mention Templater placeholders",
+      );
     });
   });
 

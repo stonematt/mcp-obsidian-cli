@@ -247,19 +247,34 @@ Examples:
 
   server.tool(
     "obsidian_create",
-    "Create a new note.\n\nParameters:\n  name (optional) — file name for the new note\n  path (optional) — vault-relative path\n  content (optional) — initial markdown content\n  template (optional) — template name to use\n\nExamples:\n  obsidian_create({ name: \"Meeting 2026-04-03\", content: \"# Meeting Notes\\n\\n- Attendees: ...\" })\n  obsidian_create({ path: \"Projects/new-idea.md\", template: \"project\" })",
+    "Create a new PLAIN note (no Templater expansion).\n\nThis wraps the CLI's `create` verb. It does NOT expand Templater placeholders\nlike `<% tp.date.now() %>` — if your template contains placeholders, use\n`obsidian_create_from_template` instead, which routes to\n`templater:create-from-template`.\n\nParameters:\n  name (optional) — file name for the new note\n  path (optional) — vault-relative path\n  content (optional) — initial markdown content (literal, no placeholder expansion)\n\nExamples:\n  obsidian_create({ name: \"Meeting 2026-04-03\", content: \"# Meeting Notes\\n\\n- Attendees: ...\" })\n  obsidian_create({ path: \"Projects/new-idea.md\", content: \"# New idea\" })",
     {
       name: z.string().optional().describe("File name"),
       path: z.string().optional().describe("File path"),
-      content: z.string().optional().describe("Initial content"),
-      template: z.string().optional().describe("Template to use"),
+      content: z.string().optional().describe("Initial content (literal — Templater placeholders are NOT expanded; use obsidian_create_from_template for that)"),
     },
-    async ({ name, path, content, template }) => {
+    async ({ name, path, content }) => {
       const args = ["create"];
       if (name) args.push(`name=${name}`);
       if (path) args.push(`path=${path}`);
-      if (template) args.push(`template=${template}`);
       if (content) args.push(`content=${content}`);
+      return runTool(args);
+    },
+  );
+
+  server.tool(
+    "obsidian_create_from_template",
+    "Create a new note from a Templater template, expanding placeholders.\n\nThis wraps the CLI's `templater:create-from-template` verb. Use this whenever\nthe template contains Templater placeholders such as `<% tp.date.now() %>`,\n`<% tp.file.title %>`, or any other `<% ... %>` expression — those are\nevaluated by Obsidian's Templater plugin and substituted into the output.\nFor plain notes with no placeholder expansion, use `obsidian_create`.\n\nParameters:\n  template (required) — vault-relative path to the Templater template (e.g. \"Templates/daily.md\")\n  file (required) — vault-relative output path for the new note (e.g. \"Daily/2026-05-18.md\")\n\nExamples:\n  obsidian_create_from_template({ template: \"Templates/daily.md\", file: \"Daily/2026-05-18.md\" })\n  obsidian_create_from_template({ template: \"Templates/project.md\", file: \"Projects/new-idea.md\" })",
+    {
+      template: z.string().describe("Vault-relative path to the Templater template"),
+      file: z.string().describe("Vault-relative output path for the new note"),
+    },
+    async ({ template, file }) => {
+      const args = [
+        "templater:create-from-template",
+        `template=${template}`,
+        `file=${file}`,
+      ];
       return runTool(args);
     },
   );
