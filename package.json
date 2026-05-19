@@ -1,6 +1,6 @@
 {
   "name": "mcp-obsidian-cli",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "mcpName": "io.github.stonematt/mcp-obsidian-cli",
   "type": "module",
   "description": "Obsidian MCP server via the official CLI plugin — no REST, no API keys, 80+ native commands.",
