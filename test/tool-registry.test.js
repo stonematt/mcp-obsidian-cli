@@ -81,7 +81,7 @@ describe("validators.fileOrPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("TYPED_TOOL_ENTRIES", () => {
-  it("contains exactly the 16 typed tools (sorted, unique)", () => {
+  it("contains exactly the 17 typed tools (sorted, unique)", () => {
     const names = TYPED_TOOL_ENTRIES.map((e) => e.name).sort();
     assert.deepEqual(names, [
       "obsidian_backlinks",
@@ -93,6 +93,7 @@ describe("TYPED_TOOL_ENTRIES", () => {
       "obsidian_files",
       "obsidian_help",
       "obsidian_move",
+      "obsidian_outline",
       "obsidian_properties",
       "obsidian_property_set",
       "obsidian_read",
@@ -164,6 +165,11 @@ const BUILD_CASES = [
   ["obsidian_move", { file: "Foo", to: "Archive/" }, ["move", "file=Foo", "to=Archive/"]],
   ["obsidian_move", { path: "Foo.md", to: "Archive/Foo.md" }, ["move", "path=Foo.md", "to=Archive/Foo.md"]],
   ["obsidian_move", { file: "Foo", path: "Foo.md", to: "Archive/" }, ["move", "file=Foo", "path=Foo.md", "to=Archive/"]],
+  ["obsidian_outline", { file: "Foo" }, ["outline", "file=Foo"]],
+  ["obsidian_outline", { path: "Foo.md" }, ["outline", "path=Foo.md"]],
+  ["obsidian_outline", { file: "Foo", format: "json" }, ["outline", "file=Foo", "format=json"]],
+  ["obsidian_outline", { path: "Foo.md", total: true }, ["outline", "path=Foo.md", "total"]],
+  ["obsidian_outline", { file: "Foo", format: "md", total: true }, ["outline", "file=Foo", "format=md", "total"]],
 ];
 
 describe("entry.build maps args to identical cli.exec args (pre-refactor parity)", () => {
@@ -243,6 +249,33 @@ describe("obsidian_move validation", () => {
       const res = await client.callTool({
         name: "obsidian_move",
         arguments: { file: "Foo" },
+      });
+      assert.equal(res.isError, true);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_outline validation", () => {
+  it("missing file and path returns isError and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_outline",
+        arguments: {},
+      });
+      assert.equal(res.isError, true);
+      assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+
+  it("rejects an out-of-enum format and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_outline",
+        arguments: { file: "Foo", format: "yaml" },
       });
       assert.equal(res.isError, true);
       assert.equal(cli.calls.length, 0);

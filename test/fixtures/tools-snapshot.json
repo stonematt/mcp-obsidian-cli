@@ -179,6 +179,38 @@
     }
   },
   {
+    "name": "obsidian_outline",
+    "description": "List the heading outline of a note, selecting it by file name or exact path.\n\nWraps the CLI's `outline` Verb. Provide one of file or path. Optional `format` controls the output shape; optional `total` returns just the heading count.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  format (optional) — output format: 'tree' (default), 'md', or 'json'\n  total (optional) — true to return the heading count instead of the outline\n  One of file or path is required.\n\nExamples:\n  obsidian_outline({ file: \"Meeting Notes\" })\n  obsidian_outline({ path: \"Projects/plan.md\", format: \"json\" })\n  obsidian_outline({ file: \"Long Doc\", total: true })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name (wikilink resolution)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Exact file path"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "tree",
+            "md",
+            "json"
+          ],
+          "description": "Output format (default: tree)"
+        },
+        "total": {
+          "type": "boolean",
+          "description": "Return heading count instead of the outline"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
     "name": "obsidian_properties",
     "description": "List or read frontmatter properties.\n\nParameters:\n  file (optional) — note name for wikilink resolution\n  path (optional) — exact file path\n  name (optional) — specific property name to read (requires file or path)\n\nExamples:\n  obsidian_properties({}) — list all properties with counts\n  obsidian_properties({ file: \"My Note\" }) — properties of a specific note\n  obsidian_properties({ file: \"My Note\", name: \"status\" }) — read one property",
     "inputSchema": {
