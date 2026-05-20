@@ -81,7 +81,7 @@ describe("validators.fileOrPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("TYPED_TOOL_ENTRIES", () => {
-  it("contains exactly the 14 typed tools (sorted, unique)", () => {
+  it("contains exactly the 16 typed tools (sorted, unique)", () => {
     const names = TYPED_TOOL_ENTRIES.map((e) => e.name).sort();
     assert.deepEqual(names, [
       "obsidian_backlinks",
@@ -92,6 +92,7 @@ describe("TYPED_TOOL_ENTRIES", () => {
       "obsidian_daily_read",
       "obsidian_files",
       "obsidian_help",
+      "obsidian_move",
       "obsidian_properties",
       "obsidian_property_set",
       "obsidian_read",
@@ -160,6 +161,9 @@ const BUILD_CASES = [
   ["obsidian_backlinks", { path: "P.md" }, ["backlinks", "path=P.md", "counts"]],
   ["obsidian_files", {}, ["files"]],
   ["obsidian_files", { folder: "F/", ext: "md" }, ["files", "folder=F/", "ext=md"]],
+  ["obsidian_move", { file: "Foo", to: "Archive/" }, ["move", "file=Foo", "to=Archive/"]],
+  ["obsidian_move", { path: "Foo.md", to: "Archive/Foo.md" }, ["move", "path=Foo.md", "to=Archive/Foo.md"]],
+  ["obsidian_move", { file: "Foo", path: "Foo.md", to: "Archive/" }, ["move", "file=Foo", "path=Foo.md", "to=Archive/"]],
 ];
 
 describe("entry.build maps args to identical cli.exec args (pre-refactor parity)", () => {
@@ -214,6 +218,33 @@ describe("registerTypedTools", () => {
       const res = await client.callTool({ name: "obsidian_read", arguments: {} });
       assert.equal(res.isError, true);
       assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_move validation", () => {
+  it("missing file and path returns isError and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_move",
+        arguments: { to: "Archive/" },
+      });
+      assert.equal(res.isError, true);
+      assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+
+  it("missing required to is rejected and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_move",
+        arguments: { file: "Foo" },
+      });
+      assert.equal(res.isError, true);
       assert.equal(cli.calls.length, 0);
     });
   });

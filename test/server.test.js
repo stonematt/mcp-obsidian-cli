@@ -135,6 +135,7 @@ const EXPECTED_TOOL_NAMES = [
   "obsidian_property_set",
   "obsidian_backlinks",
   "obsidian_files",
+  "obsidian_move",
   "obsidian_recents",
   "obsidian_help",
 ];
@@ -571,7 +572,7 @@ describe("createServer", () => {
       assert.match(obs.description, /DELETE/);
       assert.match(obs.description, /DISCOVER/);
       assert.match(obs.description, /read\s+path=/);
-      assert.match(obs.description, /move\s+from=/);
+      assert.match(obs.description, /move\s+file=/);
       assert.match(obs.description, /templater:create-from-template/);
     });
   });
