@@ -8,6 +8,7 @@ import {
   loadConfig,
   text,
   errorResult,
+  jsonResult,
   buildCliArgs,
   cliNotFoundMessage,
   loadVersion,
@@ -157,6 +158,34 @@ describe("errorResult", () => {
       content: [{ type: "text", text: "something broke" }],
       isError: true,
     });
+  });
+});
+
+describe("jsonResult", () => {
+  it("wraps a top-level JSON array under items and keeps the raw text", () => {
+    const raw = '[{"tag":"#a","count":"1"}]';
+    const r = jsonResult(raw);
+    assert.deepStrictEqual(r.structuredContent, { items: [{ tag: "#a", count: "1" }] });
+    assert.equal(r.content[0].text, raw);
+    assert.equal(r.isError, undefined);
+  });
+
+  it("passes a top-level JSON object through unchanged", () => {
+    const raw = '{"vault":"flat_tax","count":48}';
+    const r = jsonResult(raw);
+    assert.deepStrictEqual(r.structuredContent, { vault: "flat_tax", count: 48 });
+  });
+
+  it("structuredContent round-trips back to the parsed value", () => {
+    const raw = '[1,2,3]';
+    const r = jsonResult(raw);
+    assert.deepStrictEqual(r.structuredContent.items, JSON.parse(raw));
+  });
+
+  it("degrades to a plain text result on parse failure (never an error)", () => {
+    const r = jsonResult("not json at all");
+    assert.deepStrictEqual(r, { content: [{ type: "text", text: "not json at all" }] });
+    assert.equal(r.structuredContent, undefined);
   });
 });
 

@@ -1,14 +1,13 @@
 /**
  * obsidian-mcp — MCP server wrapping the Obsidian CLI.
  *
- * This module is a pure factory. Construct it with the deps you need; do
- * not import it for side effects. The runtime entrypoint lives at
- * `bin/server.js`, which loads config, builds the adapter, and connects
- * the stdio transport.
+ * Pure factory. Construct with deps; do not import for side effects. The
+ * runtime entrypoint lives at `bin/server.js`.
  *
- * Exposes a single generic `obsidian` tool that passes any command string
- * directly to the CLI, plus a handful of convenience tools for the most
- * common operations (read, search, daily, tasks, properties, etc.).
+ * Exposes a generic `obsidian` pass-through tool plus a typed-tool registry
+ * (see `lib/tool-registry.js`) that registers convenience tools as data
+ * entries. Adding a new verb = one entry, not a hand-written `server.tool`
+ * block.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -16,9 +15,15 @@ import { z } from "zod";
 import {
   text,
   errorResult,
+  jsonResult,
   parseArgs,
   extractLeadingVault,
 } from "./lib/helpers.js";
+import {
+  TYPED_TOOL_ENTRIES,
+  registerTypedTools,
+} from "./lib/tool-registry.js";
+import { registerVaultResources } from "./lib/resources.js";
 
 /**
  * Build a wired MCP server. Inject the CLI adapter, prompt content,
@@ -71,8 +76,13 @@ export function createServer({
     );
   }
 
-  /** Run CLI, return MCP result. Accepts a command string or an args array. */
-  async function runTool(input) {
+  /**
+   * Run CLI, return MCP result. Accepts a command string or an args array.
+   * With `{ json: true }` (typed-tool opt-in, see #29) a successful stdout is
+   * parsed and returned as structured content, degrading to text on parse
+   * failure.
+   */
+  async function runTool(input, { json = false } = {}) {
     if (!(await cli.isObsidianRunning())) {
       return errorResult(
         "Obsidian.app is not running. Open Obsidian and retry — no Claude Desktop restart needed.",
@@ -100,6 +110,7 @@ export function createServer({
     if (error) {
       return errorResult(error.message, error.type);
     }
+    if (json) return jsonResult(stdout);
     const parts = [];
     if (stdout) parts.push(stdout);
     if (stderr) parts.push(`[stderr] ${stderr}`);
@@ -133,7 +144,7 @@ GET
   list properties / read one     -> properties [file=…]  |  property:read name=… file=…
   list backlinks                 -> backlinks file=…
 MOVE/RENAME
-  move or rename note            -> move from=… to=…
+  move or rename note            -> move file=… to=…   (or path=…)
 DELETE
   delete note                    -> delete path=…
 DISCOVER
@@ -179,239 +190,22 @@ If you don't see the intent here, the CLI's \`help\` verb is the source of truth
     },
   );
 
-  // ---- Convenience tools for common operations ----------------------------
+  // ---- Typed convenience tools (registry-driven) -------------------------
+  //
+  // Every typed tool is one entry in `TYPED_TOOL_ENTRIES`. The loop wires
+  // each entry's Zod schema + build() into a `server.tool` registration.
+  // `obsidian_help` uses a custom handler (ctx.helpHandler) because it
+  // depends on the injected manifest + prompts map.
 
-  server.tool(
-    "obsidian_daily_read",
-    "Read today's daily note contents.\n\nReturns the full markdown content of today's daily note. Returns an error if no daily note exists for today.",
-    {},
-    async () => runTool("daily:read"),
-  );
+  const helpHandler = makeHelpHandler({ manifest, prompts });
+  registerTypedTools(server, runTool, TYPED_TOOL_ENTRIES, { helpHandler });
 
-  server.tool(
-    "obsidian_daily_path",
-    "Get the file path of today's daily note.\n\nReturns the vault-relative path (e.g. 'Daily/2026-04-03.md'). Useful for constructing paths for other tools.",
-    {},
-    async () => runTool("daily:path"),
-  );
+  // ---- MCP Resources (read-only vault metadata) --------------------------
+  //
+  // obsidian://vault, /files, /tags — lazy, cheap, read through the same CLI
+  // adapter the tools use (see lib/resources.js).
 
-  server.tool(
-    "obsidian_daily_append",
-    "Append content to today's daily note.\n\nParameters:\n  content (required) — markdown text to append at the end of today's daily note\n\nExamples:\n  obsidian_daily_append({ content: \"- Meeting with team at 3pm\" })\n  obsidian_daily_append({ content: \"> [!tip] Remember\\n> Review PR before EOD\" })",
-    { content: z.string().describe("Content to append") },
-    async ({ content }) => runTool(["daily:append", `content=${content}`]),
-  );
-
-  server.tool(
-    "obsidian_read",
-    "Read a note by file name (wikilink-style) or exact path.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  One of file or path is required.\n\nExamples:\n  obsidian_read({ file: \"Meeting Notes\" })\n  obsidian_read({ path: \"Projects/todo.md\" })",
-    {
-      file: z.string().optional().describe("File name (wikilink resolution)"),
-      path: z.string().optional().describe("Exact file path"),
-    },
-    async ({ file, path }) => {
-      if (!file && !path) return text("Error: provide file= or path=");
-      const args = ["read"];
-      if (file) args.push(`file=${file}`);
-      if (path) args.push(`path=${path}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_search",
-    "Full-text search across the vault with line context.\n\nParameters:\n  query (required) — search terms, supports Obsidian query syntax\n  path (optional) — restrict results to a folder path\n  limit (optional) — max number of files to return\n\nExamples:\n  obsidian_search({ query: \"meeting notes\" })\n  obsidian_search({ query: \"project status\", path: \"Work/\", limit: 5 })",
-    {
-      query: z.string().describe("Search query"),
-      path: z.string().optional().describe("Limit to folder"),
-      limit: z.number().optional().describe("Max files to return"),
-    },
-    async ({ query, path, limit }) => {
-      const args = ["search:context", `query=${query}`];
-      if (path) args.push(`path=${path}`);
-      if (limit) args.push(`limit=${limit}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_tags",
-    "List tags in the vault with counts.\n\nParameters:\n  sort (optional) — 'name' or 'count' (default: name)\n\nExamples:\n  obsidian_tags({})\n  obsidian_tags({ sort: \"count\" })",
-    {
-      sort: z.enum(["name", "count"]).optional().describe("Sort order"),
-    },
-    async ({ sort }) => {
-      const args = ["tags", "counts"];
-      if (sort) args.push(`sort=${sort}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_tasks",
-    "List tasks from vault notes.\n\nParameters:\n  daily (optional) — true to show only today's daily note tasks\n  todo (optional) — true to show only incomplete tasks\n  done (optional) — true to show only completed tasks\n  path (optional) — filter by file path\n\nExamples:\n  obsidian_tasks({ daily: true })\n  obsidian_tasks({ todo: true, path: \"Projects/\" })",
-    {
-      daily: z.boolean().optional().describe("Show only daily note tasks"),
-      todo: z.boolean().optional().describe("Show incomplete tasks only"),
-      done: z.boolean().optional().describe("Show completed tasks only"),
-      path: z.string().optional().describe("Filter by file path"),
-    },
-    async ({ daily, todo, done, path }) => {
-      const args = ["tasks"];
-      if (daily) args.push("daily");
-      if (todo) args.push("todo");
-      if (done) args.push("done");
-      if (path) args.push(`path=${path}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_properties",
-    "List or read frontmatter properties.\n\nParameters:\n  file (optional) — note name for wikilink resolution\n  path (optional) — exact file path\n  name (optional) — specific property name to read (requires file or path)\n\nExamples:\n  obsidian_properties({}) — list all properties with counts\n  obsidian_properties({ file: \"My Note\" }) — properties of a specific note\n  obsidian_properties({ file: \"My Note\", name: \"status\" }) — read one property",
-    {
-      file: z.string().optional().describe("File name"),
-      path: z.string().optional().describe("File path"),
-      name: z.string().optional().describe("Specific property name to read"),
-    },
-    async ({ file, path, name }) => {
-      if (name && (file || path)) {
-        const args = ["property:read", `name=${name}`];
-        if (file) args.push(`file=${file}`);
-        if (path) args.push(`path=${path}`);
-        return runTool(args);
-      }
-      const args = ["properties"];
-      if (file) args.push(`file=${file}`);
-      if (path) args.push(`path=${path}`);
-      args.push("counts");
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_create",
-    "Create a new PLAIN note (no Templater expansion).\n\nThis wraps the CLI's `create` verb. It does NOT expand Templater placeholders\nlike `<% tp.date.now() %>` — if your template contains placeholders, use\n`obsidian_create_from_template` instead, which routes to\n`templater:create-from-template`.\n\nParameters:\n  name (optional) — file name for the new note\n  path (optional) — vault-relative path\n  content (optional) — initial markdown content (literal, no placeholder expansion)\n\nExamples:\n  obsidian_create({ name: \"Meeting 2026-04-03\", content: \"# Meeting Notes\\n\\n- Attendees: ...\" })\n  obsidian_create({ path: \"Projects/new-idea.md\", content: \"# New idea\" })",
-    {
-      name: z.string().optional().describe("File name"),
-      path: z.string().optional().describe("File path"),
-      content: z.string().optional().describe("Initial content (literal — Templater placeholders are NOT expanded; use obsidian_create_from_template for that)"),
-    },
-    async ({ name, path, content }) => {
-      const args = ["create"];
-      if (name) args.push(`name=${name}`);
-      if (path) args.push(`path=${path}`);
-      if (content) args.push(`content=${content}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_create_from_template",
-    "Create a new note from a Templater template, expanding placeholders.\n\nThis wraps the CLI's `templater:create-from-template` verb. Use this whenever\nthe template contains Templater placeholders such as `<% tp.date.now() %>`,\n`<% tp.file.title %>`, or any other `<% ... %>` expression — those are\nevaluated by Obsidian's Templater plugin and substituted into the output.\nFor plain notes with no placeholder expansion, use `obsidian_create`.\n\nParameters:\n  template (required) — vault-relative path to the Templater template (e.g. \"Templates/daily.md\")\n  file (required) — vault-relative output path for the new note (e.g. \"Daily/2026-05-18.md\")\n\nExamples:\n  obsidian_create_from_template({ template: \"Templates/daily.md\", file: \"Daily/2026-05-18.md\" })\n  obsidian_create_from_template({ template: \"Templates/project.md\", file: \"Projects/new-idea.md\" })",
-    {
-      template: z.string().describe("Vault-relative path to the Templater template"),
-      file: z.string().describe("Vault-relative output path for the new note"),
-    },
-    async ({ template, file }) => {
-      const args = [
-        "templater:create-from-template",
-        `template=${template}`,
-        `file=${file}`,
-      ];
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_property_set",
-    "Set a frontmatter property on a note.\n\nParameters:\n  name (required) — property name\n  value (required) — property value\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n  One of file or path is required.\n\nExamples:\n  obsidian_property_set({ name: \"status\", value: \"done\", file: \"My Task\" })\n  obsidian_property_set({ name: \"tags\", value: \"project, active\", path: \"Work/todo.md\" })",
-    {
-      name: z.string().describe("Property name"),
-      value: z.string().describe("Property value"),
-      file: z.string().optional().describe("File name"),
-      path: z.string().optional().describe("File path"),
-    },
-    async ({ name, value, file, path: filePath }) => {
-      if (!file && !filePath) return text("Error: provide file= or path=");
-      const args = ["property:set", `name=${name}`, `value=${value}`];
-      if (file) args.push(`file=${file}`);
-      if (filePath) args.push(`path=${filePath}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_backlinks",
-    "List backlinks to a note.\n\nParameters:\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n\nExamples:\n  obsidian_backlinks({ file: \"Project Plan\" })\n  obsidian_backlinks({ path: \"Ideas/brainstorm.md\" })",
-    {
-      file: z.string().optional().describe("File name"),
-      path: z.string().optional().describe("File path"),
-    },
-    async ({ file, path }) => {
-      const args = ["backlinks"];
-      if (file) args.push(`file=${file}`);
-      if (path) args.push(`path=${path}`);
-      args.push("counts");
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_files",
-    "List files in the vault or a specific folder.\n\nParameters:\n  folder (optional) — filter by folder path\n  ext (optional) — filter by file extension (e.g. 'md', 'canvas')\n\nExamples:\n  obsidian_files({})\n  obsidian_files({ folder: \"Projects/\", ext: \"md\" })",
-    {
-      folder: z.string().optional().describe("Filter by folder path"),
-      ext: z.string().optional().describe("Filter by extension"),
-    },
-    async ({ folder, ext }) => {
-      const args = ["files"];
-      if (folder) args.push(`folder=${folder}`);
-      if (ext) args.push(`ext=${ext}`);
-      return runTool(args);
-    },
-  );
-
-  server.tool(
-    "obsidian_recents",
-    "List recently opened files.\n\nReturns the most recently opened files in the vault, ordered by last access time.",
-    {},
-    async () => runTool("recents"),
-  );
-
-  server.tool(
-    "obsidian_help",
-    "Get Obsidian help: a live verb index from the CLI, or reference docs by slug.\n\nParameters:\n  topic (optional) — a verb name (e.g. \"read\", \"daily:append\", \"property:set\") OR a reference-doc slug (cli, markdown, bases, canvas)\n\nBehavior:\n  - No topic — returns the live, category-grouped verb index parsed from the CLI's `help` output (Read, Write, Edit, Discover, Tasks, Daily, Properties, Plugins, Dev, Eval).\n  - Verb name — returns that verb's description and flag list from the live manifest.\n  - Doc slug — returns the Kepano-derived reference prompt (markdown / bases / canvas / cli syntax).\n  - Collision rule: if a doc slug also names a real verb, the verb's live help wins (live truth beats static text).\n\nExamples:\n  obsidian_help({}) — browse the verb catalog\n  obsidian_help({ topic: \"read\" }) — live verb help for `read`\n  obsidian_help({ topic: \"markdown\" }) — Obsidian-flavored markdown reference\n  obsidian_help({ topic: \"bases\" }) — Bases YAML schema, filters, formulas\n  obsidian_help({ topic: \"canvas\" }) — JSON Canvas reference\n  obsidian_help({ topic: \"cli\" }) — CLI command syntax reference",
-    { topic: z.string().optional().describe("Verb name or reference-doc slug (cli, markdown, bases, canvas)") },
-    async ({ topic }) => {
-      // No topic: render the manifest index. If no manifest is wired, fall
-      // back to listing the available reference-doc slugs.
-      if (!topic) {
-        if (manifest) {
-          const index = await manifest.all();
-          return text(renderVerbIndex(index));
-        }
-        return text(renderDocSlugList(prompts));
-      }
-
-      // Topic given: verb wins over doc slug. Probe the manifest first.
-      if (manifest) {
-        const verb = await manifest.forVerb(topic);
-        if (verb) return text(renderVerbHelp(verb));
-      }
-
-      // No verb match — fall back to the static reference prompt if the
-      // topic names a doc slug.
-      const promptKey = `obsidian-${topic}`;
-      if (prompts && Object.prototype.hasOwnProperty.call(prompts, promptKey)) {
-        return text(prompts[promptKey]);
-      }
-
-      return text(
-        `No help found for '${topic}'. Try obsidian_help() with no arguments to browse the verb index, or pass a doc slug: cli, markdown, bases, canvas.`,
-      );
-    },
-  );
+  registerVaultResources(server, cli);
 
   // ---- MCP Prompts -----------------------------------------------------------
 
@@ -450,8 +244,41 @@ If you don't see the intent here, the CLI's \`help\` verb is the source of truth
 }
 
 // ---------------------------------------------------------------------------
-// obsidian_help renderers
+// obsidian_help handler — closes over the injected manifest + prompts.
+// Reserved-doc-slug-wins routing lives here so the registry entry stays
+// pure data.
 // ---------------------------------------------------------------------------
+
+function makeHelpHandler({ manifest, prompts }) {
+  return async ({ topic }) => {
+    if (!topic) {
+      if (manifest) {
+        const index = await manifest.all();
+        return text(renderVerbIndex(index));
+      }
+      return text(renderDocSlugList(prompts));
+    }
+
+    // Reserved doc slugs (cli/markdown/bases/canvas) are a curated namespace
+    // and win over a same-named live verb: the doc is what the tool advertises,
+    // and resolving it from the static prompts map means docs stay reachable
+    // even when Obsidian is down. The shadowed verb (only `bases` today) still
+    // appears in the no-arg index. Verb lookup serves every other topic.
+    const promptKey = `obsidian-${topic}`;
+    if (prompts && Object.prototype.hasOwnProperty.call(prompts, promptKey)) {
+      return text(prompts[promptKey]);
+    }
+
+    if (manifest) {
+      const verb = await manifest.forVerb(topic);
+      if (verb) return text(renderVerbHelp(verb));
+    }
+
+    return text(
+      `No help found for '${topic}'. Try obsidian_help() with no arguments to browse the verb index, or pass a doc slug: cli, markdown, bases, canvas.`,
+    );
+  };
+}
 
 /**
  * Render a category-grouped verb index (the output of `manifest.all()`) into

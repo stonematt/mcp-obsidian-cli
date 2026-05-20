@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0] - 2026-05-20
+
+This release rounds out the typed-tool surface so AI assistants can reach the same Obsidian operations the `obsidian-cli` skill exposes, adds read-only vault metadata, and lets clients opt into structured (parsed) tool output.
+
+### Added
+- **Vault metadata as MCP resources.** `obsidian://vault`, `obsidian://vault/files`, and `obsidian://vault/tags` expose the active vault's name, file list, and tag list as read-only resources — clients can browse vault structure without spending a tool call (#30).
+- **`obsidian_command`** — run any Obsidian command by its ID (the same actions in the Command Palette), so prompts can trigger settings toggles, plugin actions, and editor commands directly (#19).
+- **`obsidian_rename` and `obsidian_delete`** — rename and delete notes as first-class typed tools instead of hand-writing the generic verb (#16).
+- **`obsidian_move`** — move or relocate a note to another folder (#15).
+- **`obsidian_outline`** — pull a note's heading outline without reading the whole file (#17).
+- **`obsidian_template_read` and `obsidian_history`** — read a template's contents, and view a note's saved version history (snapshots/sync revisions) (#18).
+- **Opt-in structured JSON output.** `obsidian_tags` and `obsidian_tasks` can return machine-readable structured content alongside the text result, so clients that support structured tool results get parsed data instead of re-parsing strings. Text-only behavior is unchanged for clients that don't (#29).
+
+### Changed
+- **`obsidian_help` doc topics are always reachable.** `cli`, `markdown`, `bases`, and `canvas` now always return their reference doc, even when a CLI verb shares the name. Previously `obsidian_help({ topic: "bases" })` returned the `bases` verb's help and the Bases reference doc was unreachable; the shadowed verb still appears in the no-arg verb index (#56). This reverses the "verb wins on collision" behavior noted in 1.4.0.
+
 ## [1.4.0] - 2026-05-19
 
 ### Added
