@@ -23,6 +23,7 @@ import {
   TYPED_TOOL_ENTRIES,
   registerTypedTools,
 } from "./lib/tool-registry.js";
+import { registerVaultResources } from "./lib/resources.js";
 
 /**
  * Build a wired MCP server. Inject the CLI adapter, prompt content,
@@ -198,6 +199,13 @@ If you don't see the intent here, the CLI's \`help\` verb is the source of truth
 
   const helpHandler = makeHelpHandler({ manifest, prompts });
   registerTypedTools(server, runTool, TYPED_TOOL_ENTRIES, { helpHandler });
+
+  // ---- MCP Resources (read-only vault metadata) --------------------------
+  //
+  // obsidian://vault, /files, /tags — lazy, cheap, read through the same CLI
+  // adapter the tools use (see lib/resources.js).
+
+  registerVaultResources(server, cli);
 
   // ---- MCP Prompts -----------------------------------------------------------
 
