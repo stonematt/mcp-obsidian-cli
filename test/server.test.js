@@ -139,6 +139,8 @@ const EXPECTED_TOOL_NAMES = [
   "obsidian_outline",
   "obsidian_rename",
   "obsidian_delete",
+  "obsidian_template_read",
+  "obsidian_history",
   "obsidian_recents",
   "obsidian_help",
 ];
