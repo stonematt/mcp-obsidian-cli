@@ -1,7 +1,7 @@
 [
   {
     "name": "obsidian",
-    "description": "Run any Obsidian CLI command. Pass the full command string exactly as you\nwould on the terminal (minus the leading 'obsidian' binary name). Leading\n`vault=NAME` overrides the active vault and is cached for subsequent calls.\n\nIntent -> verb cheatsheet. Use the canonical verb on the right; the convenience\ntools (`obsidian_*`) wrap the same verbs with typed args.\n\nPUT\n  put new note from template     -> templater:create-from-template template=… file=…\n  create plain note              -> create path=… content=…\n  append to today's daily        -> daily:append content=…\nGET\n  read note                      -> read path=…   (or file=…)\n  search content                 -> search:context query=… [path=… limit=…]\n  list properties / read one     -> properties [file=…]  |  property:read name=… file=…\n  list backlinks                 -> backlinks file=…\nMOVE/RENAME\n  move or rename note            -> move from=… to=…\nDELETE\n  delete note                    -> delete path=…\nDISCOVER\n  list files                     -> files [folder=… ext=…]\n  list tags with counts          -> tags counts [sort=name|count]\n  list tasks                     -> tasks [daily todo done path=…]\n  recently opened                -> recents\n  CLI reference                  -> help [verb]\n\nIf you don't see the intent here, the CLI's `help` verb is the source of truth.",
+    "description": "Run any Obsidian CLI command. Pass the full command string exactly as you\nwould on the terminal (minus the leading 'obsidian' binary name). Leading\n`vault=NAME` overrides the active vault and is cached for subsequent calls.\n\nIntent -> verb cheatsheet. Use the canonical verb on the right; the convenience\ntools (`obsidian_*`) wrap the same verbs with typed args.\n\nPUT\n  put new note from template     -> templater:create-from-template template=… file=…\n  create plain note              -> create path=… content=…\n  append to today's daily        -> daily:append content=…\nGET\n  read note                      -> read path=…   (or file=…)\n  search content                 -> search:context query=… [path=… limit=…]\n  list properties / read one     -> properties [file=…]  |  property:read name=… file=…\n  list backlinks                 -> backlinks file=…\nMOVE/RENAME\n  move or rename note            -> move file=… to=…   (or path=…)\nDELETE\n  delete note                    -> delete path=…\nDISCOVER\n  list files                     -> files [folder=… ext=…]\n  list tags with counts          -> tags counts [sort=name|count]\n  list tasks                     -> tasks [daily todo done path=…]\n  recently opened                -> recents\n  CLI reference                  -> help [verb]\n\nIf you don't see the intent here, the CLI's `help` verb is the source of truth.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -148,6 +148,32 @@
           "description": "Verb name or reference-doc slug (cli, markdown, bases, canvas)"
         }
       },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_move",
+    "description": "Move or rename a note, selecting it by file name or exact path.\n\nWraps the CLI's `move` Verb. Provide one of file or path to select the note, and `to` for the destination. Setting `to` to a new name in the same folder renames the note.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  to (required) — destination folder or vault-relative path\n  One of file or path is required.\n\nExamples:\n  obsidian_move({ file: \"My Note\", to: \"Archive/\" })\n  obsidian_move({ path: \"Inbox/idea.md\", to: \"Projects/idea.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name (wikilink resolution)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Exact file path"
+        },
+        "to": {
+          "type": "string",
+          "description": "Destination folder or vault-relative path"
+        }
+      },
+      "required": [
+        "to"
+      ],
       "additionalProperties": false,
       "$schema": "http://json-schema.org/draft-07/schema#"
     }
