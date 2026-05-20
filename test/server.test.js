@@ -136,6 +136,7 @@ const EXPECTED_TOOL_NAMES = [
   "obsidian_backlinks",
   "obsidian_files",
   "obsidian_move",
+  "obsidian_outline",
   "obsidian_recents",
   "obsidian_help",
 ];
