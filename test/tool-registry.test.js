@@ -387,6 +387,51 @@ describe("obsidian_template_read validation", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Structured JSON output (#29) — opt-in via entry.json
+// ---------------------------------------------------------------------------
+
+describe("structured JSON output (#29)", () => {
+  it("only the documented verbs opt in via entry.json", () => {
+    const optedIn = TYPED_TOOL_ENTRIES.filter((e) => e.json).map((e) => e.name).sort();
+    assert.deepEqual(optedIn, ["obsidian_tags", "obsidian_tasks"]);
+  });
+
+  it("an opt-in tool appends format=json and returns structuredContent", async () => {
+    const tasks = '[{"status":"x","text":"done","file":"a.md","line":"1"}]';
+    const cli = fakeCli({ result: { stdout: tasks, stderr: "", error: null } });
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({ name: "obsidian_tasks", arguments: {} });
+      assert.deepEqual(cli.calls[0], ["tasks", "format=json"]);
+      assert.equal(res.isError, undefined);
+      assert.deepEqual(res.structuredContent, { items: JSON.parse(tasks) });
+      // raw JSON still available as text for non-structured clients
+      assert.equal(res.content[0].text, tasks);
+    });
+  });
+
+  it("an opt-in tool with non-JSON output degrades to text (no error)", async () => {
+    const cli = fakeCli({ result: { stdout: "plain text", stderr: "", error: null } });
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({ name: "obsidian_tags", arguments: {} });
+      assert.deepEqual(cli.calls[0], ["tags", "counts", "format=json"]);
+      assert.equal(res.isError, undefined);
+      assert.equal(res.structuredContent, undefined);
+      assert.equal(res.content[0].text, "plain text");
+    });
+  });
+
+  it("a non-opt-in tool returns text only, no structuredContent and no format=json", async () => {
+    const cli = fakeCli({ result: { stdout: '{"a":1}', stderr: "", error: null } });
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({ name: "obsidian_read", arguments: { file: "Foo" } });
+      assert.deepEqual(cli.calls[0], ["read", "file=Foo"]);
+      assert.equal(res.structuredContent, undefined);
+      assert.equal(res.content[0].text, '{"a":1}');
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Snapshot: the full tools/list shape must equal the pre-refactor fixture.
 // Refactor is behavior-preserving if and only if this diff is empty.
 // ---------------------------------------------------------------------------
