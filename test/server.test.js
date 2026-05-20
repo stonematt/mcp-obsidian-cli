@@ -137,6 +137,8 @@ const EXPECTED_TOOL_NAMES = [
   "obsidian_files",
   "obsidian_move",
   "obsidian_outline",
+  "obsidian_rename",
+  "obsidian_delete",
   "obsidian_recents",
   "obsidian_help",
 ];
