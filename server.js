@@ -15,6 +15,7 @@ import { z } from "zod";
 import {
   text,
   errorResult,
+  jsonResult,
   parseArgs,
   extractLeadingVault,
 } from "./lib/helpers.js";
@@ -74,8 +75,13 @@ export function createServer({
     );
   }
 
-  /** Run CLI, return MCP result. Accepts a command string or an args array. */
-  async function runTool(input) {
+  /**
+   * Run CLI, return MCP result. Accepts a command string or an args array.
+   * With `{ json: true }` (typed-tool opt-in, see #29) a successful stdout is
+   * parsed and returned as structured content, degrading to text on parse
+   * failure.
+   */
+  async function runTool(input, { json = false } = {}) {
     if (!(await cli.isObsidianRunning())) {
       return errorResult(
         "Obsidian.app is not running. Open Obsidian and retry — no Claude Desktop restart needed.",
@@ -103,6 +109,7 @@ export function createServer({
     if (error) {
       return errorResult(error.message, error.type);
     }
+    if (json) return jsonResult(stdout);
     const parts = [];
     if (stdout) parts.push(stdout);
     if (stderr) parts.push(`[stderr] ${stderr}`);

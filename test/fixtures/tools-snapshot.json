@@ -406,7 +406,7 @@
   },
   {
     "name": "obsidian_tags",
-    "description": "List tags in the vault with counts.\n\nParameters:\n  sort (optional) — 'name' or 'count' (default: name)\n\nExamples:\n  obsidian_tags({})\n  obsidian_tags({ sort: \"count\" })",
+    "description": "List tags in the vault with counts.\n\nReturns structured JSON content (an array of { tag, count } objects) alongside the text form, so clients can consume it without re-parsing.\n\nParameters:\n  sort (optional) — 'name' or 'count' (default: name)\n\nExamples:\n  obsidian_tags({})\n  obsidian_tags({ sort: \"count\" })",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -425,7 +425,7 @@
   },
   {
     "name": "obsidian_tasks",
-    "description": "List tasks from vault notes.\n\nParameters:\n  daily (optional) — true to show only today's daily note tasks\n  todo (optional) — true to show only incomplete tasks\n  done (optional) — true to show only completed tasks\n  path (optional) — filter by file path\n\nExamples:\n  obsidian_tasks({ daily: true })\n  obsidian_tasks({ todo: true, path: \"Projects/\" })",
+    "description": "List tasks from vault notes.\n\nReturns structured JSON content (an array of task objects with status, text, file, and line) alongside the text form, so clients can consume it without re-parsing.\n\nParameters:\n  daily (optional) — true to show only today's daily note tasks\n  todo (optional) — true to show only incomplete tasks\n  done (optional) — true to show only completed tasks\n  path (optional) — filter by file path\n\nExamples:\n  obsidian_tasks({ daily: true })\n  obsidian_tasks({ todo: true, path: \"Projects/\" })",
     "inputSchema": {
       "type": "object",
       "properties": {
