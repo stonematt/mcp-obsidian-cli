@@ -81,7 +81,7 @@ describe("validators.fileOrPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("TYPED_TOOL_ENTRIES", () => {
-  it("contains exactly the 19 typed tools (sorted, unique)", () => {
+  it("contains exactly the 21 typed tools (sorted, unique)", () => {
     const names = TYPED_TOOL_ENTRIES.map((e) => e.name).sort();
     assert.deepEqual(names, [
       "obsidian_backlinks",
@@ -93,6 +93,7 @@ describe("TYPED_TOOL_ENTRIES", () => {
       "obsidian_delete",
       "obsidian_files",
       "obsidian_help",
+      "obsidian_history",
       "obsidian_move",
       "obsidian_outline",
       "obsidian_properties",
@@ -103,6 +104,7 @@ describe("TYPED_TOOL_ENTRIES", () => {
       "obsidian_search",
       "obsidian_tags",
       "obsidian_tasks",
+      "obsidian_template_read",
     ]);
   });
 
@@ -179,6 +181,11 @@ const BUILD_CASES = [
   ["obsidian_delete", { path: "Foo.md" }, ["delete", "path=Foo.md"]],
   ["obsidian_delete", { file: "Foo", permanent: true }, ["delete", "file=Foo", "permanent"]],
   ["obsidian_delete", { path: "Foo.md", permanent: true }, ["delete", "path=Foo.md", "permanent"]],
+  ["obsidian_template_read", { name: "daily" }, ["template:read", "name=daily"]],
+  ["obsidian_template_read", { name: "daily", resolve: true }, ["template:read", "name=daily", "resolve"]],
+  ["obsidian_template_read", { name: "daily", resolve: true, title: "My Note" }, ["template:read", "name=daily", "resolve", "title=My Note"]],
+  ["obsidian_history", { file: "Foo" }, ["history", "file=Foo"]],
+  ["obsidian_history", { path: "Foo.md" }, ["history", "path=Foo.md"]],
 ];
 
 describe("entry.build maps args to identical cli.exec args (pre-refactor parity)", () => {
@@ -329,6 +336,35 @@ describe("obsidian_delete validation", () => {
       });
       assert.equal(res.isError, true);
       assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_history validation", () => {
+  it("missing file and path returns isError and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_history",
+        arguments: {},
+      });
+      assert.equal(res.isError, true);
+      assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_template_read validation", () => {
+  it("missing required name is rejected and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_template_read",
+        arguments: {},
+      });
+      assert.equal(res.isError, true);
       assert.equal(cli.calls.length, 0);
     });
   });

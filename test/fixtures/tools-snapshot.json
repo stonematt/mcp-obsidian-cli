@@ -176,6 +176,25 @@
     }
   },
   {
+    "name": "obsidian_history",
+    "description": "List the saved file-history versions of a note, selecting it by file name or exact path.\n\nWraps the CLI's `history` Verb. Returns the version history (snapshots/sync revisions) recorded for a single note — not a list of recently-modified notes. Provide one of file or path to select the note.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  One of file or path is required.\n\nExamples:\n  obsidian_history({ file: \"Project Plan\" })\n  obsidian_history({ path: \"Daily/2026-05-20.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name (wikilink resolution)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Exact file path"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
     "name": "obsidian_move",
     "description": "Move or rename a note, selecting it by file name or exact path.\n\nWraps the CLI's `move` Verb. Provide one of file or path to select the note, and `to` for the destination. Setting `to` to a new name in the same folder renames the note.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  to (required) — destination folder or vault-relative path\n  One of file or path is required.\n\nExamples:\n  obsidian_move({ file: \"My Note\", to: \"Archive/\" })\n  obsidian_move({ path: \"Inbox/idea.md\", to: \"Projects/idea.md\" })",
     "inputSchema": {
@@ -409,6 +428,32 @@
           "description": "Filter by file path"
         }
       },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_template_read",
+    "description": "Read the content of a template by name from the vault's templates folder.\n\nWraps the CLI's `template:read` Verb. Returns the raw template text. Set `resolve` to expand the template's variables (e.g. Templater placeholders) instead of returning them literally; pass `title` to supply the title used during that variable resolution.\n\nParameters:\n  name (required) — template name (as it appears in the templates folder)\n  resolve (optional) — true to resolve/expand template variables\n  title (optional) — title used for variable resolution (with resolve)\n\nExamples:\n  obsidian_template_read({ name: \"daily\" })\n  obsidian_template_read({ name: \"meeting\", resolve: true, title: \"Standup 2026-05-20\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Template name"
+        },
+        "resolve": {
+          "type": "boolean",
+          "description": "Resolve/expand template variables"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title for variable resolution (used with resolve)"
+        }
+      },
+      "required": [
+        "name"
+      ],
       "additionalProperties": false,
       "$schema": "http://json-schema.org/draft-07/schema#"
     }
