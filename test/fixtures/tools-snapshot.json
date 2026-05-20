@@ -1,0 +1,309 @@
+[
+  {
+    "name": "obsidian",
+    "description": "Run any Obsidian CLI command. Pass the full command string exactly as you\nwould on the terminal (minus the leading 'obsidian' binary name). Leading\n`vault=NAME` overrides the active vault and is cached for subsequent calls.\n\nIntent -> verb cheatsheet. Use the canonical verb on the right; the convenience\ntools (`obsidian_*`) wrap the same verbs with typed args.\n\nPUT\n  put new note from template     -> templater:create-from-template template=… file=…\n  create plain note              -> create path=… content=…\n  append to today's daily        -> daily:append content=…\nGET\n  read note                      -> read path=…   (or file=…)\n  search content                 -> search:context query=… [path=… limit=…]\n  list properties / read one     -> properties [file=…]  |  property:read name=… file=…\n  list backlinks                 -> backlinks file=…\nMOVE/RENAME\n  move or rename note            -> move from=… to=…\nDELETE\n  delete note                    -> delete path=…\nDISCOVER\n  list files                     -> files [folder=… ext=…]\n  list tags with counts          -> tags counts [sort=name|count]\n  list tasks                     -> tasks [daily todo done path=…]\n  recently opened                -> recents\n  CLI reference                  -> help [verb]\n\nIf you don't see the intent here, the CLI's `help` verb is the source of truth.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "CLI command and arguments"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_backlinks",
+    "description": "List backlinks to a note.\n\nParameters:\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n\nExamples:\n  obsidian_backlinks({ file: \"Project Plan\" })\n  obsidian_backlinks({ path: \"Ideas/brainstorm.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_create",
+    "description": "Create a new PLAIN note (no Templater expansion).\n\nThis wraps the CLI's `create` verb. It does NOT expand Templater placeholders\nlike `<% tp.date.now() %>` — if your template contains placeholders, use\n`obsidian_create_from_template` instead, which routes to\n`templater:create-from-template`.\n\nParameters:\n  name (optional) — file name for the new note\n  path (optional) — vault-relative path\n  content (optional) — initial markdown content (literal, no placeholder expansion)\n\nExamples:\n  obsidian_create({ name: \"Meeting 2026-04-03\", content: \"# Meeting Notes\\n\\n- Attendees: ...\" })\n  obsidian_create({ path: \"Projects/new-idea.md\", content: \"# New idea\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "File name"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path"
+        },
+        "content": {
+          "type": "string",
+          "description": "Initial content (literal — Templater placeholders are NOT expanded; use obsidian_create_from_template for that)"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_create_from_template",
+    "description": "Create a new note from a Templater template, expanding placeholders.\n\nThis wraps the CLI's `templater:create-from-template` verb. Use this whenever\nthe template contains Templater placeholders such as `<% tp.date.now() %>`,\n`<% tp.file.title %>`, or any other `<% ... %>` expression — those are\nevaluated by Obsidian's Templater plugin and substituted into the output.\nFor plain notes with no placeholder expansion, use `obsidian_create`.\n\nParameters:\n  template (required) — vault-relative path to the Templater template (e.g. \"Templates/daily.md\")\n  file (required) — vault-relative output path for the new note (e.g. \"Daily/2026-05-18.md\")\n\nExamples:\n  obsidian_create_from_template({ template: \"Templates/daily.md\", file: \"Daily/2026-05-18.md\" })\n  obsidian_create_from_template({ template: \"Templates/project.md\", file: \"Projects/new-idea.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Vault-relative path to the Templater template"
+        },
+        "file": {
+          "type": "string",
+          "description": "Vault-relative output path for the new note"
+        }
+      },
+      "required": [
+        "template",
+        "file"
+      ],
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_daily_append",
+    "description": "Append content to today's daily note.\n\nParameters:\n  content (required) — markdown text to append at the end of today's daily note\n\nExamples:\n  obsidian_daily_append({ content: \"- Meeting with team at 3pm\" })\n  obsidian_daily_append({ content: \"> [!tip] Remember\\n> Review PR before EOD\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "Content to append"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_daily_path",
+    "description": "Get the file path of today's daily note.\n\nReturns the vault-relative path (e.g. 'Daily/2026-04-03.md'). Useful for constructing paths for other tools.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_daily_read",
+    "description": "Read today's daily note contents.\n\nReturns the full markdown content of today's daily note. Returns an error if no daily note exists for today.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_files",
+    "description": "List files in the vault or a specific folder.\n\nParameters:\n  folder (optional) — filter by folder path\n  ext (optional) — filter by file extension (e.g. 'md', 'canvas')\n\nExamples:\n  obsidian_files({})\n  obsidian_files({ folder: \"Projects/\", ext: \"md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folder": {
+          "type": "string",
+          "description": "Filter by folder path"
+        },
+        "ext": {
+          "type": "string",
+          "description": "Filter by extension"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_help",
+    "description": "Get Obsidian help: a live verb index from the CLI, or reference docs by slug.\n\nParameters:\n  topic (optional) — a verb name (e.g. \"read\", \"daily:append\", \"property:set\") OR a reference-doc slug (cli, markdown, bases, canvas)\n\nBehavior:\n  - No topic — returns the live, category-grouped verb index parsed from the CLI's `help` output (Read, Write, Edit, Discover, Tasks, Daily, Properties, Plugins, Dev, Eval).\n  - Verb name — returns that verb's description and flag list from the live manifest.\n  - Doc slug — returns the Kepano-derived reference prompt (markdown / bases / canvas / cli syntax).\n  - Collision rule: if a doc slug also names a real verb, the verb's live help wins (live truth beats static text).\n\nExamples:\n  obsidian_help({}) — browse the verb catalog\n  obsidian_help({ topic: \"read\" }) — live verb help for `read`\n  obsidian_help({ topic: \"markdown\" }) — Obsidian-flavored markdown reference\n  obsidian_help({ topic: \"bases\" }) — Bases YAML schema, filters, formulas\n  obsidian_help({ topic: \"canvas\" }) — JSON Canvas reference\n  obsidian_help({ topic: \"cli\" }) — CLI command syntax reference",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Verb name or reference-doc slug (cli, markdown, bases, canvas)"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_properties",
+    "description": "List or read frontmatter properties.\n\nParameters:\n  file (optional) — note name for wikilink resolution\n  path (optional) — exact file path\n  name (optional) — specific property name to read (requires file or path)\n\nExamples:\n  obsidian_properties({}) — list all properties with counts\n  obsidian_properties({ file: \"My Note\" }) — properties of a specific note\n  obsidian_properties({ file: \"My Note\", name: \"status\" }) — read one property",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path"
+        },
+        "name": {
+          "type": "string",
+          "description": "Specific property name to read"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_property_set",
+    "description": "Set a frontmatter property on a note.\n\nParameters:\n  name (required) — property name\n  value (required) — property value\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n  One of file or path is required.\n\nExamples:\n  obsidian_property_set({ name: \"status\", value: \"done\", file: \"My Task\" })\n  obsidian_property_set({ name: \"tags\", value: \"project, active\", path: \"Work/todo.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Property name"
+        },
+        "value": {
+          "type": "string",
+          "description": "Property value"
+        },
+        "file": {
+          "type": "string",
+          "description": "File name"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_read",
+    "description": "Read a note by file name (wikilink-style) or exact path.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  One of file or path is required.\n\nExamples:\n  obsidian_read({ file: \"Meeting Notes\" })\n  obsidian_read({ path: \"Projects/todo.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name (wikilink resolution)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Exact file path"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_recents",
+    "description": "List recently opened files.\n\nReturns the most recently opened files in the vault, ordered by last access time.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_search",
+    "description": "Full-text search across the vault with line context.\n\nParameters:\n  query (required) — search terms, supports Obsidian query syntax\n  path (optional) — restrict results to a folder path\n  limit (optional) — max number of files to return\n\nExamples:\n  obsidian_search({ query: \"meeting notes\" })\n  obsidian_search({ query: \"project status\", path: \"Work/\", limit: 5 })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query"
+        },
+        "path": {
+          "type": "string",
+          "description": "Limit to folder"
+        },
+        "limit": {
+          "type": "number",
+          "description": "Max files to return"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_tags",
+    "description": "List tags in the vault with counts.\n\nParameters:\n  sort (optional) — 'name' or 'count' (default: name)\n\nExamples:\n  obsidian_tags({})\n  obsidian_tags({ sort: \"count\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "string",
+          "enum": [
+            "name",
+            "count"
+          ],
+          "description": "Sort order"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_tasks",
+    "description": "List tasks from vault notes.\n\nParameters:\n  daily (optional) — true to show only today's daily note tasks\n  todo (optional) — true to show only incomplete tasks\n  done (optional) — true to show only completed tasks\n  path (optional) — filter by file path\n\nExamples:\n  obsidian_tasks({ daily: true })\n  obsidian_tasks({ todo: true, path: \"Projects/\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "daily": {
+          "type": "boolean",
+          "description": "Show only daily note tasks"
+        },
+        "todo": {
+          "type": "boolean",
+          "description": "Show incomplete tasks only"
+        },
+        "done": {
+          "type": "boolean",
+          "description": "Show completed tasks only"
+        },
+        "path": {
+          "type": "string",
+          "description": "Filter by file path"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  }
+]
