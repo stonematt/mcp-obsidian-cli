@@ -81,10 +81,11 @@ describe("validators.fileOrPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("TYPED_TOOL_ENTRIES", () => {
-  it("contains exactly the 21 typed tools (sorted, unique)", () => {
+  it("contains exactly the 22 typed tools (sorted, unique)", () => {
     const names = TYPED_TOOL_ENTRIES.map((e) => e.name).sort();
     assert.deepEqual(names, [
       "obsidian_backlinks",
+      "obsidian_command",
       "obsidian_create",
       "obsidian_create_from_template",
       "obsidian_daily_append",
@@ -186,6 +187,7 @@ const BUILD_CASES = [
   ["obsidian_template_read", { name: "daily", resolve: true, title: "My Note" }, ["template:read", "name=daily", "resolve", "title=My Note"]],
   ["obsidian_history", { file: "Foo" }, ["history", "file=Foo"]],
   ["obsidian_history", { path: "Foo.md" }, ["history", "path=Foo.md"]],
+  ["obsidian_command", { id: "editor:toggle-bold" }, ["command", "id=editor:toggle-bold"]],
 ];
 
 describe("entry.build maps args to identical cli.exec args (pre-refactor parity)", () => {
@@ -336,6 +338,20 @@ describe("obsidian_delete validation", () => {
       });
       assert.equal(res.isError, true);
       assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_command validation", () => {
+  it("missing required id is rejected and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_command",
+        arguments: {},
+      });
+      assert.equal(res.isError, true);
       assert.equal(cli.calls.length, 0);
     });
   });
