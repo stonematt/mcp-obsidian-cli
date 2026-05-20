@@ -81,7 +81,7 @@ describe("validators.fileOrPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("TYPED_TOOL_ENTRIES", () => {
-  it("contains exactly the 17 typed tools (sorted, unique)", () => {
+  it("contains exactly the 19 typed tools (sorted, unique)", () => {
     const names = TYPED_TOOL_ENTRIES.map((e) => e.name).sort();
     assert.deepEqual(names, [
       "obsidian_backlinks",
@@ -90,6 +90,7 @@ describe("TYPED_TOOL_ENTRIES", () => {
       "obsidian_daily_append",
       "obsidian_daily_path",
       "obsidian_daily_read",
+      "obsidian_delete",
       "obsidian_files",
       "obsidian_help",
       "obsidian_move",
@@ -98,6 +99,7 @@ describe("TYPED_TOOL_ENTRIES", () => {
       "obsidian_property_set",
       "obsidian_read",
       "obsidian_recents",
+      "obsidian_rename",
       "obsidian_search",
       "obsidian_tags",
       "obsidian_tasks",
@@ -170,6 +172,13 @@ const BUILD_CASES = [
   ["obsidian_outline", { file: "Foo", format: "json" }, ["outline", "file=Foo", "format=json"]],
   ["obsidian_outline", { path: "Foo.md", total: true }, ["outline", "path=Foo.md", "total"]],
   ["obsidian_outline", { file: "Foo", format: "md", total: true }, ["outline", "file=Foo", "format=md", "total"]],
+  ["obsidian_rename", { file: "Foo", name: "Bar" }, ["rename", "file=Foo", "name=Bar"]],
+  ["obsidian_rename", { path: "Foo.md", name: "Bar.md" }, ["rename", "path=Foo.md", "name=Bar.md"]],
+  ["obsidian_rename", { file: "Foo", path: "Foo.md", name: "Bar" }, ["rename", "file=Foo", "path=Foo.md", "name=Bar"]],
+  ["obsidian_delete", { file: "Foo" }, ["delete", "file=Foo"]],
+  ["obsidian_delete", { path: "Foo.md" }, ["delete", "path=Foo.md"]],
+  ["obsidian_delete", { file: "Foo", permanent: true }, ["delete", "file=Foo", "permanent"]],
+  ["obsidian_delete", { path: "Foo.md", permanent: true }, ["delete", "path=Foo.md", "permanent"]],
 ];
 
 describe("entry.build maps args to identical cli.exec args (pre-refactor parity)", () => {
@@ -278,6 +287,48 @@ describe("obsidian_outline validation", () => {
         arguments: { file: "Foo", format: "yaml" },
       });
       assert.equal(res.isError, true);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_rename validation", () => {
+  it("missing file and path returns isError and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_rename",
+        arguments: { name: "Bar" },
+      });
+      assert.equal(res.isError, true);
+      assert.match(res.content[0].text, /provide file= or path=/);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+
+  it("missing required name is rejected and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_rename",
+        arguments: { file: "Foo" },
+      });
+      assert.equal(res.isError, true);
+      assert.equal(cli.calls.length, 0);
+    });
+  });
+});
+
+describe("obsidian_delete validation", () => {
+  it("missing file and path returns isError and does not call cli.exec", async () => {
+    const cli = fakeCli();
+    await withClient({ cli }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_delete",
+        arguments: {},
+      });
+      assert.equal(res.isError, true);
+      assert.match(res.content[0].text, /provide file= or path=/);
       assert.equal(cli.calls.length, 0);
     });
   });

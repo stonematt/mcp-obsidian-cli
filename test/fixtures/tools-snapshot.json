@@ -119,6 +119,29 @@
     }
   },
   {
+    "name": "obsidian_delete",
+    "description": "Delete a note, selecting it by file name or exact path.\n\nWraps the CLI's `delete` Verb. DESTRUCTIVE: by default the note is moved to the system trash (recoverable). Pass `permanent: true` to skip the trash and delete irrecoverably — there is no undo for a permanent delete.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  permanent (optional) — true to skip trash and delete permanently (irreversible)\n  One of file or path is required.\n\nExamples:\n  obsidian_delete({ file: \"Old Draft\" }) — moves to trash\n  obsidian_delete({ path: \"Inbox/spam.md\", permanent: true }) — irreversible",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name (wikilink resolution)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Exact file path"
+        },
+        "permanent": {
+          "type": "boolean",
+          "description": "Skip trash and delete permanently (irreversible)"
+        }
+      },
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
     "name": "obsidian_files",
     "description": "List files in the vault or a specific folder.\n\nParameters:\n  folder (optional) — filter by folder path\n  ext (optional) — filter by file extension (e.g. 'md', 'canvas')\n\nExamples:\n  obsidian_files({})\n  obsidian_files({ folder: \"Projects/\", ext: \"md\" })",
     "inputSchema": {
@@ -289,6 +312,32 @@
     "inputSchema": {
       "type": "object",
       "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "obsidian_rename",
+    "description": "Rename a note, selecting it by file name or exact path.\n\nWraps the CLI's `rename` Verb. Provide one of file or path to select the note, and `name` for the new file name. Renaming changes only the name within the same folder; use obsidian_move to relocate a note to a different folder.\n\nParameters:\n  file (optional) — note name using wikilink resolution (e.g. 'My Note')\n  path (optional) — exact vault-relative path (e.g. 'folder/My Note.md')\n  name (required) — the new file name\n  One of file or path is required.\n\nExamples:\n  obsidian_rename({ file: \"Draft\", name: \"Final\" })\n  obsidian_rename({ path: \"Inbox/idea.md\", name: \"refined-idea.md\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File name (wikilink resolution)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Exact file path"
+        },
+        "name": {
+          "type": "string",
+          "description": "New file name"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
       "$schema": "http://json-schema.org/draft-07/schema#"
     }
   },
