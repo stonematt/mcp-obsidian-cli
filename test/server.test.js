@@ -141,6 +141,7 @@ const EXPECTED_TOOL_NAMES = [
   "obsidian_delete",
   "obsidian_template_read",
   "obsidian_history",
+  "obsidian_command",
   "obsidian_recents",
   "obsidian_help",
 ];

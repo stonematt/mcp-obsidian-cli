@@ -37,6 +37,24 @@
     }
   },
   {
+    "name": "obsidian_command",
+    "description": "Execute an Obsidian command by its canonical command ID.\n\nWraps the CLI's `command` Verb. Triggers any core or plugin command exactly as the user would from the command palette — identified by its stable command ID (e.g. 'editor:toggle-bold', 'app:go-back', 'daily-notes').\n\nDiscovering IDs: run the generic `obsidian` tool with the `commands` verb to list every available command ID, or `commands filter=<prefix>` to narrow by prefix (e.g. 'commands filter=editor:').\n\nParameters:\n  id (required) — the command ID to execute\n\nExamples:\n  obsidian_command({ id: \"editor:toggle-bold\" })\n  obsidian_command({ id: \"daily-notes\" })",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Obsidian command ID to execute"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
     "name": "obsidian_create",
     "description": "Create a new PLAIN note (no Templater expansion).\n\nThis wraps the CLI's `create` verb. It does NOT expand Templater placeholders\nlike `<% tp.date.now() %>` — if your template contains placeholders, use\n`obsidian_create_from_template` instead, which routes to\n`templater:create-from-template`.\n\nParameters:\n  name (optional) — file name for the new note\n  path (optional) — vault-relative path\n  content (optional) — initial markdown content (literal, no placeholder expansion)\n\nExamples:\n  obsidian_create({ name: \"Meeting 2026-04-03\", content: \"# Meeting Notes\\n\\n- Attendees: ...\" })\n  obsidian_create({ path: \"Projects/new-idea.md\", content: \"# New idea\" })",
     "inputSchema": {
