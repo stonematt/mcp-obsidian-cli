@@ -427,9 +427,10 @@ describe("createServer", () => {
     });
   });
 
-  it("obsidian_help collision: verb wins over doc slug", async () => {
-    // Manifest contains a verb literally named "markdown". The live verb help
-    // must take precedence over the static markdown prompt content.
+  it("obsidian_help collision: reserved doc slug wins over a same-named verb", async () => {
+    // Manifest contains a verb literally named "markdown". The four reserved
+    // doc slugs (cli/markdown/bases/canvas) are a curated namespace, so the
+    // static doc must win — the verb stays reachable via the no-arg index.
     const cli = fakeCli();
     const manifest = fakeManifest({
       forVerb: async (name) => {
@@ -449,14 +450,64 @@ describe("createServer", () => {
       const text = res.content[0].text;
       assert.match(
         text,
-        /Live markdown verb from the CLI/,
-        "verb help should win over the static doc prompt",
+        /Markdown doc body/,
+        "reserved doc slug should win over a same-named verb",
       );
       assert.doesNotMatch(
         text,
-        /Markdown doc body/,
-        "static prompt content must not leak when the verb resolves",
+        /Live markdown verb from the CLI/,
+        "verb help must not shadow the reserved doc slug",
       );
+    });
+  });
+
+  it("obsidian_help({topic:'bases'}) returns the Bases doc even though bases is a live verb (issue #56)", async () => {
+    // Regression for the exact reported bug: `bases` is both a CLI verb and a
+    // reserved doc slug, and the doc must be reachable through topic=bases.
+    const cli = fakeCli();
+    const manifest = fakeManifest({
+      forVerb: async (name) => {
+        if (name !== "bases") return null;
+        return {
+          name: "bases",
+          description: "List all base files in vault",
+          flags: [],
+        };
+      },
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_help",
+        arguments: { topic: "bases" },
+      });
+      const text = res.content[0].text;
+      assert.match(text, /Bases doc body/, "topic=bases must return the Kepano Bases doc");
+      assert.doesNotMatch(
+        text,
+        /List all base files in vault/,
+        "the bases verb help must not shadow the doc",
+      );
+    });
+  });
+
+  it("obsidian_help doc-slug path never consults the manifest (reachable when Obsidian is down)", async () => {
+    // Reserved doc slugs are static prompt content; resolving one must not call
+    // manifest.forVerb, so docs stay reachable even if the CLI/Obsidian is down.
+    const cli = fakeCli();
+    let forVerbCalls = 0;
+    const manifest = fakeManifest({
+      forVerb: async () => {
+        forVerbCalls += 1;
+        return null;
+      },
+    });
+    await withClient({ cli, manifest }, async (client) => {
+      const res = await client.callTool({
+        name: "obsidian_help",
+        arguments: { topic: "bases" },
+      });
+      assert.equal(res.content[0].text, "Bases doc body");
+      assert.equal(forVerbCalls, 0, "doc-slug topic must not trigger a manifest lookup");
     });
   });
 

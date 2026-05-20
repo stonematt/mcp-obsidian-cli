@@ -245,7 +245,7 @@ If you don't see the intent here, the CLI's \`help\` verb is the source of truth
 
 // ---------------------------------------------------------------------------
 // obsidian_help handler — closes over the injected manifest + prompts.
-// Verb-wins-over-doc-slug routing lives here so the registry entry stays
+// Reserved-doc-slug-wins routing lives here so the registry entry stays
 // pure data.
 // ---------------------------------------------------------------------------
 
@@ -259,14 +259,19 @@ function makeHelpHandler({ manifest, prompts }) {
       return text(renderDocSlugList(prompts));
     }
 
-    if (manifest) {
-      const verb = await manifest.forVerb(topic);
-      if (verb) return text(renderVerbHelp(verb));
-    }
-
+    // Reserved doc slugs (cli/markdown/bases/canvas) are a curated namespace
+    // and win over a same-named live verb: the doc is what the tool advertises,
+    // and resolving it from the static prompts map means docs stay reachable
+    // even when Obsidian is down. The shadowed verb (only `bases` today) still
+    // appears in the no-arg index. Verb lookup serves every other topic.
     const promptKey = `obsidian-${topic}`;
     if (prompts && Object.prototype.hasOwnProperty.call(prompts, promptKey)) {
       return text(prompts[promptKey]);
+    }
+
+    if (manifest) {
+      const verb = await manifest.forVerb(topic);
+      if (verb) return text(renderVerbHelp(verb));
     }
 
     return text(

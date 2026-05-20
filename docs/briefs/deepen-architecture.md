@@ -99,7 +99,7 @@ A single `obsidian_help({topic?})` tool replaces today's `obsidian_help`:
 - No arg → `manifest.all()` (category-grouped verb index).
 - `topic` is a verb → `manifest.forVerb(topic)`.
 - `topic` is one of `cli|markdown|bases|canvas` → corresponding prompt content.
-- On ambiguity (verb name collides with doc slug), verb wins. Live truth beats static doc.
+- On ambiguity (verb name collides with doc slug), the reserved doc slug wins — the four slugs are a curated namespace and the doc is what the tool advertises. Resolving from the static prompts map also keeps docs reachable when Obsidian is down. The shadowed verb (only `bases` today) stays visible in the no-arg index. (Revised by #56; the original design had verb-wins, which made the Bases doc unreachable.)
 
 The MCP prompts (`registerPrompt` calls for the 4 reference docs) remain, since they are the canonical mechanism for clients that support prompts.
 
