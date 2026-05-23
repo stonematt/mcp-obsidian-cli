@@ -85,7 +85,7 @@ export function createServer({
   async function runTool(input, { json = false } = {}) {
     if (!(await cli.isObsidianRunning())) {
       return errorResult(
-        "Obsidian.app is not running. Open Obsidian and retry — no Claude Desktop restart needed.",
+        "Obsidian.app is not running. Open Obsidian (it can stay backgrounded/minimized — no need to switch to it) and retry — no Claude Desktop restart needed.",
         "OBSIDIAN_NOT_RUNNING"
       );
     }

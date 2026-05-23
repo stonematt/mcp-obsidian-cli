@@ -114,7 +114,7 @@ async function main() {
   const running = await isObsidianRunning();
   if (!running) {
     console.error(
-      "Warning: Obsidian.app not detected. Server will accept connections; tool calls will fail until Obsidian is opened.",
+      "Warning: Obsidian.app not detected. Server will accept connections; tool calls will fail until Obsidian is running (it can stay backgrounded/minimized — no need to switch to it).",
     );
   }
 
