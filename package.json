@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "mcpName": "io.github.stonematt/mcp-obsidian-cli",
   "type": "module",
-  "description": "Capture chat to Obsidian - MCP server via the official CLI plugin: templates, daily notes, backlinks",
+  "description": "Save chat notes from Claude Desktop to your vault — MCP on Obsidian CLI. Keep what matters.",
   "main": "server.js",
   "bin": {
     "mcp-obsidian-cli": "bin/server.js"
