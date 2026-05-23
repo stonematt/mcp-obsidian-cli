@@ -6,13 +6,16 @@
 [![Node](https://img.shields.io/node/v/mcp-obsidian-cli.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-MCP server that wraps the Obsidian CLI, giving AI assistants full access to Obsidian's native API — search index, wikilink resolution, tasks, properties, daily notes, backlinks, and 80+ commands — through the Model Context Protocol.
+Your thinking starts in Claude Desktop, not in Obsidian. You research, draft, argue with the model, and when something's worth keeping you say "save this to my vault." It lands in the right place: your template, your properties, today's daily note, wired into your link graph. No tab-switch, no copy-paste.
 
-## Why this exists
+Two halves:
 
-Every existing Obsidian MCP server takes one of two approaches: the Local REST API plugin (requires API keys, HTTP overhead, limited command surface) or raw filesystem access (no Obsidian awareness — no search index, no wikilink resolution, no task queries). Both miss the point.
+- **Capture** — turn a conversation into a real note, filed where it belongs.
+- **Augment** — pull what's already in the vault (backlinks, full-text search) back into the chat to inform or update a note.
 
-`mcp-obsidian-cli` wraps the Obsidian CLI plugin, which talks directly to the running Obsidian instance via IPC. This means full access to Obsidian's internal APIs with zero configuration — no API keys, no REST plugins, no token management.
+Needs Obsidian running. It can sit minimized, so you never switch to it.
+
+On Claude Code? The native `obsidian-cli` skill fits better there: direct CLI, no MCP layer. Use that.
 
 ## Quick start
 
