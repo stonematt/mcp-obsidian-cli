@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.1] - 2026-05-23
+
+### Changed
+- `OBSIDIAN_NOT_RUNNING` message clarified — Obsidian only needs to be running, not in the foreground. It can stay minimized or backgrounded while the server reaches it (#69).
+- npm and README copy rewritten to lead with the capture workflow ("save chat notes from Claude Desktop to your vault") instead of generic "MCP server for Obsidian" framing.
+
 ## [2.0.0] - 2026-05-20
 
 This release rounds out the typed-tool surface so AI assistants can reach the same Obsidian operations the `obsidian-cli` skill exposes, adds read-only vault metadata, and lets clients opt into structured (parsed) tool output.
