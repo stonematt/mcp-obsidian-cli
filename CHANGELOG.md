@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.3] - 2026-05-24
+
+### Changed
+- New install brief ([docs/INSTALL.md](docs/INSTALL.md)) built for Claude Code: paste one prompt and it runs the whole setup for you — checks Node, enables the Obsidian CLI, edits your Claude Desktop config, and verifies the connection. The README's Requirements section is corrected too: Obsidian's CLI ships built into the app and just needs the **Settings → General → Advanced → "Command line interface"** toggle — there's no plugin to install. Documentation only — no code changes.
+
 ## [2.0.2] - 2026-05-24
 
 ### Changed
