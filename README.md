@@ -22,6 +22,8 @@ On Claude Code? The native `obsidian-cli` skill fits better there: direct CLI, n
 
 ## Quick start
 
+New here? The **[Install brief](docs/INSTALL.md)** has a one-line prompt you paste into Claude Code — it then does the whole setup (checks Node, enables the Obsidian CLI, edits your Claude Desktop config, verifies it works).
+
 ```bash
 npx mcp-obsidian-cli
 ```
@@ -46,9 +48,11 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ## Requirements
 
-- Obsidian running with the CLI plugin active
-- `obsidian-cli` on your PATH (typically `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli` on macOS)
+- Obsidian running with its command line interface enabled (Settings → General → Advanced → **Command line interface**). The CLI ships built into Obsidian — nothing extra to install.
+- `obsidian-cli` reachable — on your PATH, or point `OBSIDIAN_CLI_PATH` at it (typically `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli` on macOS).
 - Node.js >= 18
+
+Full walkthrough: **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 ## How it works
 
