@@ -8,6 +8,8 @@
 
 Your thinking starts in Claude Desktop, not in Obsidian. You research, draft, argue with the model, and when something's worth keeping you say "save this to my vault." It lands in the right place: your template, your properties, today's daily note, wired into your link graph. No tab-switch, no copy-paste.
 
+![Saving a Claude Desktop conversation into an Obsidian vault, then searching the vault from chat](https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/assets/demo.gif)
+
 Two halves:
 
 - **Capture** — turn a conversation into a real note, filed where it belongs.
