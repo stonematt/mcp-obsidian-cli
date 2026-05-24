@@ -6,12 +6,12 @@
     "url": "https://github.com/stonematt/mcp-obsidian-cli",
     "source": "github"
   },
-  "version": "2.0.1",
+  "version": "2.0.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-obsidian-cli",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {

@@ -1,5 +1,6 @@
 # mcp-obsidian-cli
 
+[![Obsidian CLI](https://img.shields.io/badge/Obsidian-CLI-7C3AED?logo=obsidian&logoColor=white)](https://help.obsidian.md/cli)
 [![npm version](https://img.shields.io/npm/v/mcp-obsidian-cli.svg)](https://www.npmjs.com/package/mcp-obsidian-cli)
 [![npm downloads](https://img.shields.io/npm/dm/mcp-obsidian-cli.svg)](https://www.npmjs.com/package/mcp-obsidian-cli)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=stonematt%2Fmcp-obsidian-cli)
@@ -7,6 +8,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Your thinking starts in Claude Desktop, not in Obsidian. You research, draft, argue with the model, and when something's worth keeping you say "save this to my vault." It lands in the right place: your template, your properties, today's daily note, wired into your link graph. No tab-switch, no copy-paste.
+
+![Saving a Claude Desktop conversation into an Obsidian vault, then searching the vault from chat](https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/assets/demo.gif)
 
 Two halves:
 
