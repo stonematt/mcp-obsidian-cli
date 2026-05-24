@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.2] - 2026-05-24
+
+### Changed
+- README now leads with a demo GIF of the Claude Desktop → Obsidian capture-and-augment workflow, and adds an Obsidian CLI badge to the header (#34). Documentation/presentation only — no code changes.
+
 ## [2.0.1] - 2026-05-23
 
 ### Changed

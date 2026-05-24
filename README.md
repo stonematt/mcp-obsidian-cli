@@ -1,5 +1,6 @@
 # mcp-obsidian-cli
 
+[![Obsidian CLI](https://img.shields.io/badge/Obsidian-CLI-7C3AED?logo=obsidian&logoColor=white)](https://help.obsidian.md/cli)
 [![npm version](https://img.shields.io/npm/v/mcp-obsidian-cli.svg)](https://www.npmjs.com/package/mcp-obsidian-cli)
 [![npm downloads](https://img.shields.io/npm/dm/mcp-obsidian-cli.svg)](https://www.npmjs.com/package/mcp-obsidian-cli)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/v0/servers?search=stonematt%2Fmcp-obsidian-cli)
