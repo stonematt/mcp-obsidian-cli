@@ -93,19 +93,14 @@ timeoutMs: 15000
 
 Config precedence: env vars > config file > hardcoded defaults
 
-## Compared to alternatives
+## What it can do
 
-| | mcp-obsidian-cli | REST API servers | Filesystem servers |
-|---|---|---|---|
-| Search index | Yes | Yes | No |
-| Wikilink resolution | Yes | Partial | No |
-| Task queries | Yes | No | No |
-| Property types | Yes | Partial | No |
-| Daily notes | Yes | No | No |
-| Backlinks | Yes | Yes | No |
-| API keys | None | Required | None |
-| Obsidian plugins | CLI plugin | REST API plugin | None |
-| Commands | 80+ | ~10 | ~6 |
+It talks to the running Obsidian instance, so it works with your vault the way Obsidian sees it:
+
+- **Backlinks and full-text search** across your resolved link graph and search index (the augment half).
+- **Templater templates** and typed **frontmatter properties** when creating or updating notes.
+- **Daily notes**, task queries, and tag counts.
+- **80+ commands** through the generic pass-through. No API keys, no REST plugin. Just the official Obsidian CLI.
 
 ## Bugs / requests
 
