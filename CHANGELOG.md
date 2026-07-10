@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **`obsidian_property_set` can now set multi-valued properties.** Added a `type` parameter (`text` | `list` | `number` | `checkbox` | `date` | `datetime`). Without it the tool could only write scalar strings, so setting `tags`, `aliases`, or `Links` silently collapsed a comma-separated value into one joined string instead of a YAML list. Pass `type: "list"` with a JSON-array value (e.g. `value: '["a", "b"]'`) to write a proper list. Tool description and the `cli` reference prompt now document the gotcha.
+
 ## [2.0.3] - 2026-05-24
 
 ### Changed

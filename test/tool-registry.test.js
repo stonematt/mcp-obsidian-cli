@@ -162,6 +162,7 @@ const BUILD_CASES = [
   ["obsidian_create_from_template", { template: "T.md", file: "F.md" }, ["templater:create-from-template", "template=T.md", "file=F.md"]],
   ["obsidian_property_set", { name: "n", value: "v", file: "F" }, ["property:set", "name=n", "value=v", "file=F"]],
   ["obsidian_property_set", { name: "n", value: "v", path: "P.md" }, ["property:set", "name=n", "value=v", "path=P.md"]],
+  ["obsidian_property_set", { name: "tags", value: '["a","b"]', type: "list", path: "P.md" }, ["property:set", "name=tags", 'value=["a","b"]', "type=list", "path=P.md"]],
   ["obsidian_backlinks", {}, ["backlinks", "counts"]],
   ["obsidian_backlinks", { file: "F" }, ["backlinks", "file=F", "counts"]],
   ["obsidian_backlinks", { path: "P.md" }, ["backlinks", "path=P.md", "counts"]],
