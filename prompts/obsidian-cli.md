@@ -58,7 +58,8 @@ obsidian vault="My Vault" search query="test"
 | `properties` | List all frontmatter properties in vault |
 | `properties file="Note" counts` | List properties for a specific note |
 | `property:read name="status" file="Note"` | Read a specific property value |
-| `property:set name="status" value="done" file="Note"` | Set a property |
+| `property:set name="status" value="done" file="Note"` | Set a scalar property |
+| `property:set name="tags" value='["a","b"]' type=list file="Note"` | Set a multi-valued property (tags/aliases/Links) — needs `type=list` + JSON array, else it writes one scalar string |
 | `backlinks file="Note" counts` | List notes that link to this note |
 | `files folder="Projects/"` | List files in a folder |
 | `files ext=canvas` | List files by extension |
@@ -108,6 +109,7 @@ When working with an Obsidian vault via this MCP server, use these tools instead
 - Read all properties for a note: `obsidian_properties({ file: "Note Name" })`
 - Read a specific property: `obsidian_properties({ file: "Note Name", name: "status" })`
 - Set a property: `obsidian_property_set({ name: "status", value: "done", file: "Note Name" })`
+- Set a multi-valued property: `obsidian_property_set({ name: "tags", value: '["a", "b"]', type: "list", file: "Note Name" })` — `type: "list"` + a JSON array; omitting `type` writes a single scalar string
 - List backlinks: `obsidian_backlinks({ file: "Note Name" })`
 - List files in folder: `obsidian_files({ folder: "Projects/" })`
 - List canvas files: `obsidian_files({ ext: "canvas" })`
