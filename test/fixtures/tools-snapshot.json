@@ -295,7 +295,7 @@
   },
   {
     "name": "obsidian_property_set",
-    "description": "Set a frontmatter property on a note.\n\nParameters:\n  name (required) — property name\n  value (required) — property value\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n  One of file or path is required.\n\nExamples:\n  obsidian_property_set({ name: \"status\", value: \"done\", file: \"My Task\" })\n  obsidian_property_set({ name: \"tags\", value: \"project, active\", path: \"Work/todo.md\" })",
+    "description": "Set a frontmatter property on a note.\n\nParameters:\n  name (required) — property name\n  value (required) — property value (see type for multi-valued props)\n  type (optional) — property type: text (default) | list | number | checkbox | date | datetime\n  file (optional) — note name (wikilink resolution)\n  path (optional) — exact file path\n  One of file or path is required.\n\nMulti-valued properties (tags, aliases, Links, etc.):\n  You MUST pass type=\"list\" AND a JSON-array string as value. Without type=\"list\" the value is written as a single scalar string — a comma-separated value is NOT split into YAML list items, and bracketed wikilinks are never split. Use a JSON array universally; it is unambiguous for both plain strings and wikilinks.\n\nExamples:\n  obsidian_property_set({ name: \"status\", value: \"done\", file: \"My Task\" })\n  obsidian_property_set({ name: \"tags\", value: \"[\\\"project\\\", \\\"active\\\"]\", type: \"list\", path: \"Work/todo.md\" })\n  obsidian_property_set({ name: \"Links\", value: \"[\\\"[[plan]]\\\", \\\"[[baseline]]\\\"]\", type: \"list\", file: \"My Task\" })",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -305,7 +305,19 @@
         },
         "value": {
           "type": "string",
-          "description": "Property value"
+          "description": "Property value. For type=\"list\", pass a JSON-array string, e.g. '[\"a\", \"b\"]'"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "list",
+            "number",
+            "checkbox",
+            "date",
+            "datetime"
+          ],
+          "description": "Property type. Use \"list\" for multi-valued props (tags/aliases/Links) with a JSON-array value; omitting it writes a scalar string"
         },
         "file": {
           "type": "string",
