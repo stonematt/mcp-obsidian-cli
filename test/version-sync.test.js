@@ -23,4 +23,12 @@ describe("version sync", () => {
       assert.equal(entry.version, pkg.version, `package entry ${entry.identifier}`);
     }
   });
+
+  // The lockfile carries the version twice and npm only rewrites it on install,
+  // so it drifts quietly whenever a version bump does not touch node_modules.
+  it("package-lock.json matches package.json", () => {
+    const lock = read("package-lock.json");
+    assert.equal(lock.version, pkg.version, "lockfile root version");
+    assert.equal(lock.packages?.[""]?.version, pkg.version, 'lockfile packages[""] version');
+  });
 });
