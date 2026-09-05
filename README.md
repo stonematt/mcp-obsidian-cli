@@ -9,7 +9,7 @@
 
 Your thinking starts in Claude Desktop, not in Obsidian. You research, draft, argue with the model, and when something's worth keeping you say "save this to my vault." It lands in the right place: your template, your properties, today's daily note, wired into your link graph. No tab-switch, no copy-paste.
 
-**Installing this?** Go straight to [Install](#install) — one prompt in Claude Code does the whole setup. Just looking? Read on.
+**Installing this?** Start at [Install](#install). One prompt in Claude Code handles the whole setup.
 
 ![Saving a Claude Desktop conversation into an Obsidian vault, then searching the vault from chat](https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/assets/demo.gif)
 
@@ -20,11 +20,11 @@ Two halves:
 
 Needs Obsidian running. It can sit minimized, so you never switch to it.
 
-Using this *from* Claude Code? The native `obsidian-cli` skill fits better: direct CLI, no MCP layer. Use that instead. (Installing is separate — the prompt below runs in Claude Code.)
+Using this from Claude Code? The native `obsidian-cli` skill fits better there: direct CLI, no MCP layer. Installing is separate. The prompt below runs in Claude Code.
 
 ## Install
 
-Run the prompt below in Claude Code — it checks Node, enables the Obsidian CLI, writes your Claude Desktop config, and verifies the connection. Only hand-edit the config if that path fails.
+Run the prompt below in Claude Code. It checks Node, enables the Obsidian CLI, writes your Claude Desktop config, and verifies the connection. Only hand-edit the config if that path fails.
 
 ```text
 Fetch https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/INSTALL.md
@@ -35,7 +35,7 @@ enable the Obsidian CLI, edit my Claude Desktop config, and verify it works.
 
 Full walkthrough, including failure modes: **[docs/INSTALL.md](https://github.com/stonematt/mcp-obsidian-cli/blob/master/docs/INSTALL.md)**.
 
-Just want to start the server by hand? That's the line below — it is not the install step:
+**Run the server directly.** This starts the server in your terminal and installs nothing:
 
 ```bash
 npx mcp-obsidian-cli
@@ -43,10 +43,10 @@ npx mcp-obsidian-cli
 
 ## Requirements
 
-The install prompt above checks all of these for you. Listed here for reference:
+The install prompt checks each of these. Listed here for reference:
 
 - Obsidian running with its command line interface enabled (Settings → General → Advanced → **Command line interface**). The CLI ships built into Obsidian — nothing extra to install.
-- `obsidian-cli` reachable. On macOS it is auto-detected inside the Obsidian app bundle — nothing to configure. On Linux and Windows there is no auto-detection: point `OBSIDIAN_CLI_PATH` at the binary yourself.
+- `obsidian-cli` reachable. macOS auto-detects it inside the Obsidian app bundle, so there is nothing to configure. Linux and Windows have no auto-detection: point `OBSIDIAN_CLI_PATH` at the binary yourself.
 - Node.js >= 18
 
 ## How it works
@@ -85,7 +85,7 @@ It talks to the running Obsidian instance, so it works with your vault the way O
 <details>
 <summary><strong>Manual config (if you're not using Claude Code)</strong></summary>
 
-If you are an agent installing this, use the prompt under [Install](#install) instead — it handles vault name, CLI path, and verification. This block is the hand-edit fallback.
+Automated installers should use the prompt under [Install](#install), which handles vault name, CLI path, and verification. This block is the hand-edit fallback.
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
