@@ -9,6 +9,8 @@
 
 Your thinking starts in Claude Desktop, not in Obsidian. You research, draft, argue with the model, and when something's worth keeping you say "save this to my vault." It lands in the right place: your template, your properties, today's daily note, wired into your link graph. No tab-switch, no copy-paste.
 
+**Installing this?** Start at [Install](#install). One prompt in Claude Code handles the whole setup.
+
 ![Saving a Claude Desktop conversation into an Obsidian vault, then searching the vault from chat](https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/assets/demo.gif)
 
 Two halves:
@@ -18,41 +20,34 @@ Two halves:
 
 Needs Obsidian running. It can sit minimized, so you never switch to it.
 
-On Claude Code? The native `obsidian-cli` skill fits better there: direct CLI, no MCP layer. Use that.
+Using this from Claude Code? The native `obsidian-cli` skill fits better there: direct CLI, no MCP layer. Installing is separate. The prompt below runs in Claude Code.
 
-## Quick start
+## Install
 
-New here? The **[Install brief](docs/INSTALL.md)** has a one-line prompt you paste into Claude Code — it then does the whole setup (checks Node, enables the Obsidian CLI, edits your Claude Desktop config, verifies it works).
+Run the prompt below in Claude Code. It checks Node, enables the Obsidian CLI, writes your Claude Desktop config, and verifies the connection. Only hand-edit the config if that path fails.
+
+```text
+Fetch https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/INSTALL.md
+and follow it end to end to install the mcp-obsidian-cli MCP server for my Claude Desktop.
+Ask me for my Obsidian vault name and folder path, then handle everything else — check Node,
+enable the Obsidian CLI, edit my Claude Desktop config, and verify it works.
+```
+
+Full walkthrough, including failure modes: **[docs/INSTALL.md](https://github.com/stonematt/mcp-obsidian-cli/blob/master/docs/INSTALL.md)**.
+
+**Run the server directly.** This starts the server in your terminal and installs nothing:
 
 ```bash
 npx mcp-obsidian-cli
 ```
 
-## Claude Desktop config
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "obsidian": {
-      "command": "npx",
-      "args": ["-y", "mcp-obsidian-cli"],
-      "env": {
-        "OBSIDIAN_VAULT": "my-vault"
-      }
-    }
-  }
-}
-```
-
 ## Requirements
 
-- Obsidian running with its command line interface enabled (Settings → General → Advanced → **Command line interface**). The CLI ships built into Obsidian — nothing extra to install.
-- `obsidian-cli` reachable — on your PATH, or point `OBSIDIAN_CLI_PATH` at it (typically `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli` on macOS).
-- Node.js >= 18
+The install prompt checks each of these. Listed here for reference:
 
-Full walkthrough: **[docs/INSTALL.md](docs/INSTALL.md)**.
+- Obsidian running with its command line interface enabled (Settings → General → Advanced → **Command line interface**). The CLI ships built into Obsidian — nothing extra to install.
+- `obsidian-cli` reachable. macOS auto-detects it inside the Obsidian app bundle, so there is nothing to configure. Linux and Windows have no auto-detection: point `OBSIDIAN_CLI_PATH` at the binary yourself.
+- Node.js >= 18
 
 ## How it works
 
@@ -78,6 +73,38 @@ The server exposes Obsidian CLI commands as MCP tools. A generic pass-through to
 
 The generic `obsidian` tool means the MCP server never falls behind the CLI — new CLI commands work immediately without a server update.
 
+## What it can do
+
+It talks to the running Obsidian instance, so it works with your vault the way Obsidian sees it:
+
+- **Backlinks and full-text search** across your resolved link graph and search index (the augment half).
+- **Templater templates** and typed **frontmatter properties** when creating or updating notes.
+- **Daily notes**, task queries, and tag counts.
+- **80+ commands** through the generic pass-through. No API keys, no REST plugin. Just the official Obsidian CLI.
+
+<details>
+<summary><strong>Manual config (if you're not using Claude Code)</strong></summary>
+
+Automated installers should use the prompt under [Install](#install), which handles vault name, CLI path, and verification. This block is the hand-edit fallback.
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "obsidian": {
+      "command": "npx",
+      "args": ["-y", "mcp-obsidian-cli"],
+      "env": {
+        "OBSIDIAN_VAULT": "my-vault"
+      }
+    }
+  }
+}
+```
+
+</details>
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -102,15 +129,6 @@ timeoutMs: 15000
 ```
 
 Config precedence: env vars > config file > hardcoded defaults
-
-## What it can do
-
-It talks to the running Obsidian instance, so it works with your vault the way Obsidian sees it:
-
-- **Backlinks and full-text search** across your resolved link graph and search index (the augment half).
-- **Templater templates** and typed **frontmatter properties** when creating or updating notes.
-- **Daily notes**, task queries, and tag counts.
-- **80+ commands** through the generic pass-through. No API keys, no REST plugin. Just the official Obsidian CLI.
 
 ## Bugs / requests
 
