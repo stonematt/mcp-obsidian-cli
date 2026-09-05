@@ -9,9 +9,9 @@
 
 Your thinking starts in Claude Desktop, not in Obsidian. You research, draft, argue with the model, and when something's worth keeping you say "save this to my vault." It lands in the right place: your template, your properties, today's daily note, wired into your link graph. No tab-switch, no copy-paste.
 
-![Saving a Claude Desktop conversation into an Obsidian vault, then searching the vault from chat](https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/assets/demo.gif)
-
 **Installing this?** Go straight to [Install](#install) — one prompt in Claude Code does the whole setup. Just looking? Read on.
+
+![Saving a Claude Desktop conversation into an Obsidian vault, then searching the vault from chat](https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/assets/demo.gif)
 
 Two halves:
 
@@ -20,11 +20,11 @@ Two halves:
 
 Needs Obsidian running. It can sit minimized, so you never switch to it.
 
-On Claude Code? The native `obsidian-cli` skill fits better there: direct CLI, no MCP layer. Use that.
+Using this *from* Claude Code? The native `obsidian-cli` skill fits better: direct CLI, no MCP layer. Use that instead. (Installing is separate — the prompt below runs in Claude Code.)
 
 ## Install
 
-Installing this? Run the prompt below in Claude Code — it checks Node, enables the Obsidian CLI, writes your Claude Desktop config, and verifies the connection. Only hand-edit the config if that path fails.
+Run the prompt below in Claude Code — it checks Node, enables the Obsidian CLI, writes your Claude Desktop config, and verifies the connection. Only hand-edit the config if that path fails.
 
 ```text
 Fetch https://raw.githubusercontent.com/stonematt/mcp-obsidian-cli/master/docs/INSTALL.md
