@@ -16,7 +16,8 @@
   ],
   "scripts": {
     "start": "node bin/server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "version": "node scripts/sync-manifests.js && git add server.json"
   },
   "engines": {
     "node": ">=18"
