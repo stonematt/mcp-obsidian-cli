@@ -42,3 +42,25 @@ Run `gh issue view <number> --comments`. If a Milestone is referenced, also fetc
 - Feature PRs target `dev`. `Closes #N` in the PR body is informational only until release.
 - Release is a PR from `dev → master`. The release PR body MUST include `Closes #N` for every issue shipping in the release; GitHub's auto-close only fires on merges to the default branch (`master`).
 - `master → npm publish` is the release ritual (one push per release cohort).
+
+## Version bump checklist
+
+The version lives in more places than `package.json`, and `test/version-sync.test.js` fails the
+build when they disagree. A bump must touch all of these in one commit:
+
+| File | Fields |
+|---|---|
+| `package.json` | `version` |
+| `package-lock.json` | `version`, `packages[""].version` |
+| `server.json` | `version`, `packages[0].version` |
+| `CHANGELOG.md` | a new `## [x.y.z]` section |
+
+`npm install` rewrites the two lockfile fields for you. The `server.json` pair is the one that
+gets forgotten — it is how the repo reached `server.json` 2.0.2 and `package-lock.json` 1.4.0
+against a shipped 2.0.4.
+
+`publish.yml` also rewrites `server.json` from the git tag before publishing to the MCP Registry,
+so the published artifact has always been correct. The checklist is about keeping the committed
+files honest and CI green, not about the registry.
+
+Automating this is #95; until it lands, the checklist is the ritual.
