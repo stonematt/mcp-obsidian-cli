@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createVerbManifest } from "../lib/manifest.js";
+import { createVerbManifest, parseHelpOutput } from "../lib/manifest.js";
 
 // ---------------------------------------------------------------------------
 // Helpers — fake ObsidianCli + a sliced sample of `obsidian help` output
@@ -19,6 +19,9 @@ Options:
   vault=<name>          Target a specific vault by name
 
 Notes:
+  Most commands default to the active file when no file=/path= is given.
+  Quote values with spaces: name="My Note"
+  Use \\n for newline, \\t for tab in content values
   file resolves by name (like wikilinks), path is exact (folder/note.md)
 
 Commands:
@@ -43,6 +46,10 @@ Commands:
     path=<path>         - File path
     permanent           - Skip trash, delete permanently
 
+  file                  Show information about a file
+    file=<name>         - File name
+    path=<path>         - File path
+
   files                 List files in the vault
     folder=<path>       - Filter by folder
     ext=<extension>     - Filter by extension
@@ -58,6 +65,14 @@ Commands:
 
   plugin:enable         Enable a plugin
     id=<id>             - Plugin ID (required)
+
+  base:create           Create a new base file
+    name=<name>         - Base name (required)
+    path=<path>         - File path
+
+  templater:create-from-template Create a note from a Templater template
+    template=<name>     - Template name (required)
+    name=<name>         - New note name
 
   properties            List properties in the vault
     name=<name>         - Get specific property count
@@ -285,6 +300,89 @@ describe("all() — category-grouped index", () => {
     const index = await m.all();
     assert.ok(index.Discover.includes("search"));
     assert.ok(index.Discover.includes("files"));
+  });
+
+  it("still parses namespaced verbs like base:create and templater:create-from-template", async () => {
+    const cli = fakeCli();
+    const m = createVerbManifest({ cli });
+    const index = await m.all();
+    const allVerbs = Object.values(index).flat();
+    assert.ok(allVerbs.includes("base:create"));
+    assert.ok(allVerbs.includes("templater:create-from-template"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseHelpOutput() — regression coverage for issue #53
+//
+// `Options:` and `Notes:` are flush-left prose sections whose body lines
+// happen to match the same 2-space-indented "name<spaces>description" shape
+// as a real verb line. Without a section whitelist, the parser used to open
+// a verb-collecting section on ANY flush-left "Word:" heading — including
+// these — and swallow prose as verbs.
+// ---------------------------------------------------------------------------
+
+describe("parseHelpOutput() — prose sections are not verb sources (issue #53)", () => {
+  it("does not collect verbs from the Options: section", () => {
+    const verbs = parseHelpOutput(SAMPLE_HELP);
+    assert.ok(!verbs.has("vault=<name>"), "Options: line 'vault=<name> ...' must not become a verb");
+  });
+
+  it("does not collect verbs from the Notes: section", () => {
+    const verbs = parseHelpOutput(SAMPLE_HELP);
+    assert.ok(!verbs.has("Most"), "Notes: prose starting with 'Most' must not become a verb");
+    assert.ok(!verbs.has("Quote"), "Notes: prose starting with 'Quote' must not become a verb");
+    assert.ok(!verbs.has("Use"), "Notes: prose starting with 'Use' must not become a verb");
+  });
+
+  it("resolves 'file' to the genuine Commands verb, not the Notes: prose line, regardless of section order", () => {
+    // The real `file resolves by name...` Notes line and the genuine `file`
+    // Commands verb share the Map key "file". Under the old parser this only
+    // "worked" because Commands happens to come after Notes in real help
+    // output, so the real verb overwrote the bogus one — a Map-insertion-order
+    // accident, not a fix. Reversing the section order here proves the fix
+    // does not depend on that ordering: Notes: prose is now structurally
+    // excluded no matter where it sits.
+    const reordered = `Commands:
+  file                  Show information about a file
+    file=<name>         - File name
+
+Notes:
+  file resolves by name (like wikilinks), path is exact (folder/note.md)
+`;
+    const verbs = parseHelpOutput(reordered);
+    const fileVerb = verbs.get("file");
+    assert.ok(fileVerb, "expected a 'file' verb to survive parsing");
+    assert.equal(fileVerb.description, "Show information about a file");
+    assert.doesNotMatch(fileVerb.description, /resolves by name/);
+  });
+
+  it("does not collect a 'file' verb from Notes: alone (no Commands: definition)", () => {
+    const notesOnly = `Notes:
+  file resolves by name (like wikilinks), path is exact (folder/note.md)
+`;
+    const verbs = parseHelpOutput(notesOnly);
+    assert.ok(!verbs.has("file"), "Notes:-only 'file' prose must not become a verb");
+  });
+
+  it("collects the real 'file' verb from SAMPLE_HELP with its genuine description", () => {
+    const verbs = parseHelpOutput(SAMPLE_HELP);
+    const fileVerb = verbs.get("file");
+    assert.ok(fileVerb);
+    assert.equal(fileVerb.description, "Show information about a file");
+  });
+
+  it("still parses every genuine verb across Commands: and Developer:", () => {
+    const verbs = parseHelpOutput(SAMPLE_HELP);
+    const expected = [
+      "append", "backlinks", "create", "delete", "file", "files", "move",
+      "plugins", "plugin:enable", "base:create", "templater:create-from-template",
+      "properties", "property:set", "read", "search", "tasks", "task",
+      "dev:console", "dev:errors", "eval",
+    ];
+    for (const name of expected) {
+      assert.ok(verbs.has(name), `expected genuine verb '${name}' to parse`);
+    }
   });
 });
 
