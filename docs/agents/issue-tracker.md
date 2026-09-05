@@ -42,3 +42,36 @@ Run `gh issue view <number> --comments`. If a Milestone is referenced, also fetc
 - Feature PRs target `dev`. `Closes #N` in the PR body is informational only until release.
 - Release is a PR from `dev → master`. The release PR body MUST include `Closes #N` for every issue shipping in the release; GitHub's auto-close only fires on merges to the default branch (`master`).
 - `master → npm publish` is the release ritual (one push per release cohort).
+
+## Version bump ritual
+
+The version lives in more places than `package.json`, and `test/version-sync.test.js` fails the
+build when they disagree. Bump all of them in one command:
+
+```bash
+npm version <patch|minor|major> --no-git-tag-version
+```
+
+This bumps `package.json` and `package-lock.json` (`version` and `packages[""].version`) itself,
+then runs `scripts/sync-manifests.js` as npm's `version` lifecycle script, which syncs
+`server.json` (`version` and every `packages[].version` entry) and stages the file with
+`git add`. `--no-git-tag-version` skips creating a commit or tag — tagging stays the job of
+`publish.yml`, which tags from `package.json` on push to `master`. Never tag locally; two tagging
+paths is the thing to avoid.
+
+CHANGELOG.md is not touched by the script — add the new `## [x.y.z]` section by hand; the entries
+are judgment, not mechanical. `publish.yml` parses that section for release notes and falls back
+to auto-generated notes if it's missing.
+
+Then commit everything together:
+
+```bash
+git add -A && git commit -m "chore: bump version to x.y.z"
+```
+
+`publish.yml` also rewrites `server.json` from the git tag right before publishing to the MCP
+Registry — kept intentionally as a last-resort guard against a tag/manifest mismatch that never
+went through a PR, even though the automated bump plus `test/version-sync.test.js` make it
+redundant in the happy path.
+
+This ritual is what #95 automates; it replaces the old hand-edit checklist.
