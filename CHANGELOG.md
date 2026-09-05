@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0] - 2026-09-05
+
+### Fixed
+- **`obsidian_help` no longer invents verbs.** The help parser treated any flush-left `Word:` line as the start of a command list, so prose under `Options:` and `Notes:` was collected as CLI verbs — `Most`, `Quote`, `Use`, and `vault=<name>` all showed up in the verb index alongside real commands. Verbs are now read only from the `Commands` and `Developer` sections. Verified against live `obsidian-cli help`: all 102 real verbs still parse, including plugin-annotated ones like `templater:create-from-template` (#53).
+
+### Added
+- **Root [`AGENTS.md`](AGENTS.md).** Points coding agents at the README's install prompt and tells them not to hand-write `claude_desktop_config.json`. The manual config block exists as a fallback, not a first move, and this names which path is which (#92).
+
+### Changed
+- **Version bumps are one command.** `npm version <bump> --no-git-tag-version` now updates `package.json`, `package-lock.json`, and `server.json` together. Previously the three drifted apart — the last three bumps touched only `package.json`, leaving `server.json` at 2.0.2 and the lockfile at 1.4.0 (#95).
+- **Manifest drift now fails the build instead of self-healing at publish.** A version-sync test asserts all three manifests agree. Nothing was published wrong before — `publish.yml` rewrote `server.json` from the git tag — but the committed files misled anyone reading the repo (#91).
+- **CI runs on `dev`.** `test.yml` triggered only on `master`, so no feature PR had ever run the suite; all 198 tests sat idle until the release PR. Feature PRs are now tested before they merge (#94).
+- **README leads with the install prompt.** The Claude Code install prompt is the first complete artifact on the page; the manual config JSON is collapsed below it (#89).
+
 ## [2.0.4] - 2026-07-09
 
 ### Fixed
