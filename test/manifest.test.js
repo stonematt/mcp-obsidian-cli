@@ -19,10 +19,10 @@ Options:
   vault=<name>          Target a specific vault by name
 
 Notes:
-  Most commands default to the active file when no file=/path= is given.
+  file resolves by name (like wikilinks), path is exact (folder/note.md)
+  Most commands default to the active file when file/path is omitted
   Quote values with spaces: name="My Note"
   Use \\n for newline, \\t for tab in content values
-  file resolves by name (like wikilinks), path is exact (folder/note.md)
 
 Commands:
   append                Append content to a file
@@ -66,13 +66,15 @@ Commands:
   plugin:enable         Enable a plugin
     id=<id>             - Plugin ID (required)
 
-  base:create           Create a new base file
-    name=<name>         - Base name (required)
-    path=<path>         - File path
+  base:create           Create a new item in a base
+    file=<name>         - Base file name
+    path=<path>         - Base file path
+    name=<name>         - New file name
 
-  templater:create-from-template Create a note from a Templater template
-    template=<name>     - Template name (required)
-    name=<name>         - New note name
+  templater:create-from-template[Templater]: Create a new note from a Templater template
+    template=<path>     - Template file path (relative to vault root or templates folder) (required)
+    file=<path>         - Output file path (relative to vault root) (required)
+    open                - Open the created file in the UI
 
   properties            List properties in the vault
     name=<name>         - Get specific property count
