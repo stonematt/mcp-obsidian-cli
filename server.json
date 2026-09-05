@@ -12,7 +12,9 @@
       "registryType": "npm",
       "identifier": "mcp-obsidian-cli",
       "version": "2.0.4",
-      "transport": { "type": "stdio" },
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
         {
           "name": "OBSIDIAN_VAULT",
