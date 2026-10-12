@@ -61,4 +61,4 @@ Nitimini-style `status: *` lifecycle vocabulary; `afk-ready` is an orthogonal fl
 
 ### Domain docs
 
-Single-context. Glossary at [`CONTEXT.md`](./CONTEXT.md); briefs in `docs/briefs/`; ADRs in `docs/adr/` (created lazily). See [`docs/agents/domain.md`](./docs/agents/domain.md).
+Single-context. Glossary at [`GLOSSARY.md`](./GLOSSARY.md); briefs in `docs/briefs/`; ADRs in `docs/adr/` (created lazily). See [`docs/agents/domain.md`](./docs/agents/domain.md).
