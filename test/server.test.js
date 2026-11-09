@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -793,7 +793,8 @@ describe("createServer", () => {
       [
         "--input-type=module",
         "-e",
-        `import(${JSON.stringify(serverPath)}).then(m => { if (typeof m.createServer !== 'function') { console.error('missing createServer'); process.exit(2); } });`,
+        // Dynamic import needs a file:// URL on Windows; a bare drive path is rejected.
+        `import(${JSON.stringify(pathToFileURL(serverPath).href)}).then(m => { if (typeof m.createServer !== 'function') { console.error('missing createServer'); process.exit(2); } });`,
       ],
       { timeout: 10_000 },
     );
