@@ -46,7 +46,7 @@ npx mcp-obsidian-cli
 The install prompt checks each of these. Listed here for reference:
 
 - Obsidian running with its command line interface enabled (Settings → General → Advanced → **Command line interface**). The CLI ships built into Obsidian — nothing extra to install.
-- `obsidian-cli` reachable. macOS auto-detects it inside the Obsidian app bundle, so there is nothing to configure. Linux and Windows have no auto-detection: point `OBSIDIAN_CLI_PATH` at the binary yourself.
+- `obsidian-cli` reachable. macOS auto-detects it inside the Obsidian app bundle, so there is nothing to configure. Windows probes `%ProgramFiles%\Obsidian\Obsidian.com` and `%LOCALAPPDATA%\Programs\Obsidian\Obsidian.com`; Linux has no auto-detection. Set `OBSIDIAN_CLI_PATH` to point at the binary when it lives elsewhere.
 - Node.js >= 18
 
 ## How it works
@@ -112,6 +112,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 | `OBSIDIAN_VAULT` | _(none)_ | Target vault by name |
 | `OBSIDIAN_CLI_PATH` | `obsidian-cli` | Path to CLI binary |
 | `OBSIDIAN_TIMEOUT_MS` | `15000` | Command timeout |
+| `OBSIDIAN_SKIP_PROCESS_CHECK` | _(unset)_ | Set to `1` to skip the "is Obsidian running?" pre-check (`pgrep` on macOS/Linux, `tasklist` on Windows) and always attempt the CLI call |
 | `XDG_CONFIG_HOME` | `~/.config` | Base path for config file |
 
 ## Config file

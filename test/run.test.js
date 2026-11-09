@@ -1,8 +1,20 @@
 import { spawn, execFileSync } from "node:child_process";
 import { test, describe } from "node:test";
+import { fileURLToPath } from "node:url";
 
+// Mirrors lib/obsidian-cli.js createObsidianRunningChecker so the skip
+// conditions below agree with what the server under test will report.
 function isObsidianRunning() {
   try {
+    if (process.platform === "win32") {
+      const out = execFileSync(
+        "tasklist",
+        ["/FI", "IMAGENAME eq Obsidian.exe", "/FO", "CSV", "/NH"],
+        { timeout: 2000, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      );
+      // tasklist exits 0 even with no match; only trust stdout content.
+      return /obsidian\.exe/i.test(out);
+    }
     execFileSync("pgrep", ["-f", "/Applications/Obsidian.app/Contents/MacOS/Obsidian$"], {
       timeout: 2000,
       stdio: "ignore",
@@ -16,7 +28,8 @@ function isObsidianRunning() {
 const obsidianRunning = isObsidianRunning();
 
 async function runServerOnce() {
-  const serverPath = new URL("../bin/server.js", import.meta.url).pathname;
+  // fileURLToPath (not URL#pathname) so Windows drive letters resolve correctly.
+  const serverPath = fileURLToPath(new URL("../bin/server.js", import.meta.url));
   const proc = spawn("node", [serverPath], {
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 10000,

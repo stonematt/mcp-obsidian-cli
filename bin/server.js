@@ -11,11 +11,12 @@
  *   OBSIDIAN_CLI_PATH    - Path to the obsidian CLI binary (default: "obsidian-cli")
  *   OBSIDIAN_VAULT       - Vault name to use (default: "")
  *   OBSIDIAN_TIMEOUT_MS  - Command timeout in ms (default: 15000)
+ *   OBSIDIAN_SKIP_PROCESS_CHECK - Set to 1 to skip the running-process pre-check
  *
  * Requirements:
  *   - Obsidian must be running with the CLI plugin active.
- *   - The CLI binary is auto-discovered from common macOS locations.
- *     Set OBSIDIAN_CLI_PATH to override.
+ *   - The CLI binary is auto-discovered from common macOS and Windows
+ *     locations. Set OBSIDIAN_CLI_PATH to override.
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -114,7 +115,7 @@ async function main() {
   const running = await isObsidianRunning();
   if (!running) {
     console.error(
-      "Warning: Obsidian.app not detected. Server will accept connections; tool calls will fail until Obsidian is running (it can stay backgrounded/minimized — no need to switch to it).",
+      "Warning: Obsidian.app not detected. Server will accept connections; tool calls will fail until Obsidian is running (it can stay backgrounded/minimized — no need to switch to it). Set OBSIDIAN_SKIP_PROCESS_CHECK=1 to bypass this check.",
     );
   }
 
